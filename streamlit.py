@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
 
 # Title of the Streamlit app
 st.title("Data Analysis and Forecasting App")
@@ -19,11 +21,32 @@ if uploaded_file is not None:
     st.write("Dataset Preview:")
     st.write(df.head())
 
-    # Data cleaning step (you can add more steps based on your notebook)
-    st.write("Data Cleaning:")
-    st.write(df.describe())
+    # EDA: Data Information
+    st.write("Data Information:")
+    st.write(df.info())  # Show data types and non-null counts
+    st.write(df.describe())  # Statistical summary
+
+    # EDA: Missing Values
+    st.write("Missing Values:")
+    st.write(df.isnull().sum())
+
+    # EDA: Data Distribution (Histograms for numerical features)
+    st.write("Feature Distributions:")
+    numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
+    for col in numeric_cols:
+        st.write(f"Distribution for {col}:")
+        fig, ax = plt.subplots()
+        sns.histplot(df[col], kde=True, ax=ax)
+        st.pyplot(fig)
+
+    # EDA: Correlation Heatmap
+    st.write("Correlation Heatmap:")
+    fig, ax = plt.subplots()
+    sns.heatmap(df.corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+    st.pyplot(fig)
 
     # Select features and target for modeling
+    st.write("Modeling Section")
     feature_columns = st.multiselect("Select Features", df.columns)
     target_column = st.selectbox("Select Target", df.columns)
 
