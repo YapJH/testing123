@@ -2,77 +2,34 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
 from statsmodels.tsa.stattools import kpss
 
 def process_data(uploaded_file):
-    try:
-        if uploaded_file is not None:
-            # Read the first few bytes to confirm the file contains data
-            file_contents = uploaded_file.getvalue()
-            if not file_contents:
-                st.error("The uploaded file is empty. Please upload a file with data.")
-                return None
-            
-            # Debugging step: Show the raw content of the file
-            st.write(file_contents[:1000])  # Show the first 1000 bytes for debugging
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        
+        # Calculate Sales by multiplying UnitPrice and Quantity
+        df['Sales'] = df['UnitPrice'] * df['Quantity']
+        
+        # Create a mapping of StockCode to the most common Description
+        stockcode_description_map = df.groupby('StockCode')['Description'].apply(
+            lambda x: x.mode().iloc[0] if not x.mode().empty else None
+        ).to_dict()
 
-            # Proceed with reading the CSV
-            df = pd.read_csv(uploaded_file)
+        # Fill missing Description values based on the StockCode
+        df['Description'] = df.apply(
+            lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
+            axis=1
+        )
 
-            if df.empty:
-                st.error("The uploaded CSV file is empty. Please upload a file with data.")
-                return None
-            # Ensure 'UnitPrice' and 'Quantity' columns exist
-            if 'UnitPrice' not in df.columns or 'Quantity' not in df.columns:
-                st.error("Required columns 'UnitPrice' or 'Quantity' are missing in the uploaded file.")
-                return None
-            
-            # Calculate Sales by multiplying UnitPrice and Quantity
-            df['Sales'] = df['UnitPrice'] * df['Quantity']
-            
-            # Create a mapping of StockCode to the most common Description
-            stockcode_description_map = df.groupby('StockCode')['Description'].apply(
-                lambda x: x.mode().iloc[0] if not x.mode().empty else None
-            ).to_dict()
+        # Drop rows with missing Description or CustomerID
+        df = df.dropna(subset=['Description', 'CustomerID'])
 
-            # Fill missing Description values based on the StockCode
-            df['Description'] = df.apply(
-                lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
-                axis=1
-            )
+        # Remove rows with non-positive values in specified columns
+        df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
 
-            # Drop rows with missing Description or CustomerID
-            df = df.dropna(subset=['Description', 'CustomerID'])
-
-            # Remove rows with non-positive values in specified columns
-            df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
-
-            return df
-    except pd.errors.EmptyDataError:
-        st.error("The uploaded file is empty or invalid. Please upload a valid CSV file.")
-        return None
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-        return None
-
-def check_stationarity(df):
-    if 'Sales' in df.columns:
-        df['Sales_log'] = np.log(df['Sales'] + 1)
-        kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
-        st.write('KPSS Statistic:', kpss_result[0])
-        st.write('p-value:', kpss_result[1])
-
-        if kpss_result[1] < 0.05:
-            st.write("The log-transformed data is trend stationary.")
-            if st.checkbox('Apply differencing despite stationarity?'):
-                apply_differencing(df)
-        else:
-            st.write("The log-transformed data is not trend stationary, applying differencing.")
-            apply_differencing(df)
-    else:
-        st.error("The 'Sales' column is required for stationarity checks but is not present in the DataFrame.")
+        return df
+    return None
 
 def apply_differencing(df):
     # Log transformation and differencing
@@ -96,60 +53,31 @@ def apply_differencing(df):
     st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
     st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
 
-def model_data(df):
-    # Aggregate to monthly data
-    df_monthly = df.resample('M').agg({
-        'Sales_diff': 'sum',
-        'UnitPrice': 'mean',
-        'Country_Encoded': 'mean'
-    })
-    df_monthly['Month'] = df_monthly.index.month
-    df_monthly['DayOfWeek'] = df_monthly.index.dayofweek
-    df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
+def check_stationarity(df):
+    if 'Sales' in df.columns:
+        df['Sales_log'] = np.log(df['Sales'] + 1)
+        kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
+        st.write('KPSS Statistic:', kpss_result[0])
+        st.write('p-value:', kpss_result[1])
 
-    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-    y = df_monthly['Sales_diff']
-    
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Train model
-    lin_model = LinearRegression()
-    lin_model.fit(X_train, y_train)
-    
-    # Predictions
-    future_dates = pd.date_range(start=df_monthly.index.max() + pd.DateOffset(months=1), periods=12, freq='M')
-    future_data = pd.DataFrame(index=future_dates)
-    future_data['Month'] = future_data.index.month
-    future_data['DayOfWeek'] = future_data.index.dayofweek
-    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
-    future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
-    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
-    
-    future_data = future_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-    y_future = lin_model.predict(future_data)
-    
-    return df_monthly, future_dates, y_future
-
-def plot_results(df_monthly, future_dates, y_future):
-    plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly.index, df_monthly['Sales_diff'], label='Historical Sales', color='blue')
-    plt.plot(future_dates, y_future, label='Linear Regression Predictions', linestyle='--', color='red')
-    plt.title('Historical and Forecasted Monthly Sales (Linear Regression)')  # Corrected line
-    plt.xlabel('Date')
-    plt.ylabel('Sales')
-    plt.legend()
-    plt.show()
-
+        if kpss_result[1] < 0.05:
+            st.write("The log-transformed data is trend stationary.")
+            if st.checkbox('Apply differencing despite stationarity?'):
+                apply_differencing(df)
+        else:
+            st.write("The log-transformed data is not trend stationary, applying differencing.")
+            apply_differencing(df)
+    else:
+        st.error("The 'Sales' column is required for stationarity checks but is not present in the DataFrame.")
 
 def main():
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
-        df_prepared = process_data(uploaded_file)
-        if df_prepared is not None:
-            df_monthly, future_dates, y_future = model_data(df_prepared)
-            plot_results(df_monthly, future_dates, y_future)
+        df = process_data(uploaded_file)
+        if df is not None:
+            check_stationarity(df)
+        else:
+            st.error("Please ensure the uploaded file includes 'UnitPrice' and 'Quantity' columns to calculate 'Sales'.")
 
 if __name__ == "__main__":
     main()
