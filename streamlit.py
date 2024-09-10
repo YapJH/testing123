@@ -86,7 +86,7 @@ def check_stationarity(df):
 # Function to train different models and plot results
 def model_data_and_plot(df, model_type='Linear Regression'):
     # Ensure necessary columns exist before aggregation
-    required_columns = ['Sales', 'UnitPrice', 'Country_Encoded']
+    required_columns = ['Sales', 'UnitPrice']
     if not all(col in df.columns for col in required_columns):
         st.error(f"The dataset is missing required columns: {required_columns}")
         return
@@ -94,12 +94,11 @@ def model_data_and_plot(df, model_type='Linear Regression'):
     # Aggregate existing data to monthly
     df_monthly = df.resample('M').agg({
         'Sales': 'sum',
-        'UnitPrice': 'mean',
-        'Country_Encoded': 'mean'
+        'UnitPrice': 'mean'
     }).reset_index()
 
     # Prepare data for modeling
-    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
     y = df_monthly['Sales']
 
     # Splitting the data into training and testing sets
@@ -132,10 +131,9 @@ def model_data_and_plot(df, model_type='Linear Regression'):
     future_data['DayOfWeek'] = future_data.index.dayofweek
     future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
     future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
-    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
 
     # Ensure the order of features matches the model's expectations
-    future_data = future_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    future_data = future_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
 
     # Generate predictions for the future period
     future_predictions = model.predict(future_data)
