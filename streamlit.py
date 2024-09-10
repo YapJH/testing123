@@ -70,14 +70,6 @@ def apply_differencing(df):
     st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
     st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from statsmodels.tsa.stattools import kpss
-
 # Assuming df is loaded and InvoiceDate set
 def prepare_data(df):
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
