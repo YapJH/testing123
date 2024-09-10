@@ -24,6 +24,14 @@ if uploaded_file is not None:
     # Load the dataset
     df = pd.read_csv(uploaded_file)
 
+    # Check if 'Quantity' and 'UnitPrice' columns exist
+    if 'Quantity' in df.columns and 'UnitPrice' in df.columns:
+        # Create Sales column
+        df['Sales'] = df['UnitPrice'] * df['Quantity']
+    else:
+        st.error("'Quantity' or 'UnitPrice' column is missing in the dataset.")
+        st.stop()
+
     # Preprocessing: Mapping StockCode to most common Description and cleaning
     stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode().iloc[0] if not x.mode().empty else None).to_dict()
 
@@ -39,8 +47,6 @@ if uploaded_file is not None:
     # Drop rows where Quantity, UnitPrice, or CustomerID are negative or zero
     df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
 
-    # Hide preprocessing, just show the results
-
     st.subheader('Exploratory Data Analysis (EDA)')
 
     # Show dataset overview
@@ -50,19 +56,22 @@ if uploaded_file is not None:
     # --- Sales Data Visualizations ---
     st.subheader('Sales Data Over Time')
 
-    # Sales Data Visualization Over Years
-    plt.figure(figsize=(14, 7))
-    plt.scatter(df['InvoiceDate'], df['Sales'], color='blue', marker='o', s=10, alpha=0.5)
-    plt.gca().xaxis.set_major_locator(mdates.YearLocator())
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    plt.gcf().autofmt_xdate()
-    plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))
-    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-    plt.title('Sales Data Visualization Over Years')
-    plt.xlabel('Year')
-    plt.ylabel('Sales')
-    plt.legend(['Individual Sales'], loc='upper left')
-    st.pyplot(plt)
+    # Ensure 'InvoiceDate' column exists
+    if 'InvoiceDate' in df.columns:
+        plt.figure(figsize=(14, 7))
+        plt.scatter(df['InvoiceDate'], df['Sales'], color='blue', marker='o', s=10, alpha=0.5)
+        plt.gca().xaxis.set_major_locator(mdates.YearLocator())
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        plt.gcf().autofmt_xdate()
+        plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+        plt.title('Sales Data Visualization Over Years')
+        plt.xlabel('Year')
+        plt.ylabel('Sales')
+        plt.legend(['Individual Sales'], loc='upper left')
+        st.pyplot(plt)
+    else:
+        st.error("'InvoiceDate' column is missing in the dataset.")
 
     # --- Pivot Table Visualization ---
     st.subheader('Average Sales by Month and Day of Week')
