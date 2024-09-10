@@ -40,8 +40,10 @@ def check_stationarity(df):
 
         if kpss_result[1] < 0.05:
             st.write("The log-transformed data is trend stationary.")
+            if st.checkbox('Apply differencing despite stationarity?'):
+                apply_differencing(df)
         else:
-            st.write("The log-transformed data is not trend stationary, applying differencing.")
+            st.write("The log-transformed data is not trend stationary, automatically applying differencing.")
             apply_differencing(df)
     else:
         st.error("The 'Sales' column is required for stationarity checks but is not present in the DataFrame.")
