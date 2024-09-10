@@ -7,33 +7,47 @@ from sklearn.model_selection import train_test_split
 from statsmodels.tsa.stattools import kpss
 
 def process_data(uploaded_file):
-    if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
-        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-        df.set_index('InvoiceDate', inplace=True)
-        
-        # Calculate Sales by multiplying UnitPrice and Quantity
-        df['Sales'] = df['UnitPrice'] * df['Quantity']
-        
-        # Create a mapping of StockCode to the most common Description
-        stockcode_description_map = df.groupby('StockCode')['Description'].apply(
-            lambda x: x.mode().iloc[0] if not x.mode().empty else None
-        ).to_dict()
+    try:
+        if uploaded_file is not None:
+            # Read the CSV file
+            df = pd.read_csv(uploaded_file)
+            
+            if df.empty:
+                st.error("The uploaded CSV file is empty. Please upload a file with data.")
+                return None
+            
+            # Ensure 'UnitPrice' and 'Quantity' columns exist
+            if 'UnitPrice' not in df.columns or 'Quantity' not in df.columns:
+                st.error("Required columns 'UnitPrice' or 'Quantity' are missing in the uploaded file.")
+                return None
+            
+            # Calculate Sales by multiplying UnitPrice and Quantity
+            df['Sales'] = df['UnitPrice'] * df['Quantity']
+            
+            # Create a mapping of StockCode to the most common Description
+            stockcode_description_map = df.groupby('StockCode')['Description'].apply(
+                lambda x: x.mode().iloc[0] if not x.mode().empty else None
+            ).to_dict()
 
-        # Fill missing Description values based on the StockCode
-        df['Description'] = df.apply(
-            lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
-            axis=1
-        )
+            # Fill missing Description values based on the StockCode
+            df['Description'] = df.apply(
+                lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
+                axis=1
+            )
 
-        # Drop rows with missing Description or CustomerID
-        df = df.dropna(subset=['Description', 'CustomerID'])
+            # Drop rows with missing Description or CustomerID
+            df = df.dropna(subset=['Description', 'CustomerID'])
 
-        # Remove rows with non-positive values in specified columns
-        df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
-        
-        return df
-    return None
+            # Remove rows with non-positive values in specified columns
+            df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
+
+            return df
+    except pd.errors.EmptyDataError:
+        st.error("The uploaded file is empty or invalid. Please upload a valid CSV file.")
+        return None
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        return None
 
 def check_stationarity(df):
     if 'Sales' in df.columns:
