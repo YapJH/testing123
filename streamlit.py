@@ -21,10 +21,10 @@ st.write('This app provides various sales data visualizations and insights.')
 uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
 
 if uploaded_file is not None:
-    # Load data
+    # Load data and preprocess without displaying preprocessing steps
     df = pd.read_csv(uploaded_file)
 
-    # Preprocess Data
+    # Preprocess Data: Parsing dates and generating new features
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
     df['Month'] = df['InvoiceDate'].dt.strftime('%Y-%m')
     df['Week'] = df['InvoiceDate'].dt.strftime('%Y-%U')
@@ -33,6 +33,8 @@ if uploaded_file is not None:
     df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek
     df['IsWeekend'] = df['DayOfWeek'] >= 5
     df['Sales'] = df['UnitPrice'] * df['Quantity']
+
+    # Hide preprocessing, just show the results
 
     st.subheader('Exploratory Data Analysis (EDA)')
 
