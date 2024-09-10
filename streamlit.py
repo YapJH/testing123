@@ -8,6 +8,9 @@ def process_data(uploaded_file):
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
         
+        # Calculate Sales by multiplying UnitPrice and Quantity
+        df['Sales'] = df['UnitPrice'] * df['Quantity']
+        
         # Create a mapping of StockCode to the most common Description
         stockcode_description_map = df.groupby('StockCode')['Description'].apply(
             lambda x: x.mode().iloc[0] if not x.mode().empty else None
