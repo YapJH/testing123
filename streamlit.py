@@ -2,11 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 from statsmodels.tsa.stattools import kpss
 
 def process_data(uploaded_file):
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
+        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+        df.set_index('InvoiceDate', inplace=True)
         
         # Calculate Sales by multiplying UnitPrice and Quantity
         df['Sales'] = df['UnitPrice'] * df['Quantity']
@@ -27,7 +31,7 @@ def process_data(uploaded_file):
 
         # Remove rows with non-positive values in specified columns
         df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
-
+        
         return df
     return None
 
@@ -70,18 +74,6 @@ def apply_differencing(df):
     st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
     st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
 
-# Assuming df is loaded and InvoiceDate set
-def prepare_data(df):
-    df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-    df.set_index('InvoiceDate', inplace=True)
-    
-    # Create necessary time features
-    df['Month'] = df.index.month
-    df['DayOfWeek'] = df.index.dayofweek
-    df['IsWeekend'] = df['DayOfWeek'] >= 5
-    
-    return df
-
 def model_data(df):
     # Aggregate to monthly data
     df_monthly = df.resample('M').agg({
@@ -121,7 +113,7 @@ def plot_results(df_monthly, future_dates, y_future):
     plt.figure(figsize=(14, 7))
     plt.plot(df_monthly.index, df_monthly['Sales_diff'], label='Historical Sales', color='blue')
     plt.plot(future_dates, y_future, label='Linear Regression Predictions', linestyle='--', color='red')
-    plt.title('Historical and Forecasted Monthly Sales (Linear Regression)')
+    plt.title('Historical andForecasted Monthly Sales (Linear Regression)")
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
@@ -131,9 +123,10 @@ def main():
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
-        df_prepared = prepare_data(df)
-        df_monthly, future_dates, y_future = model_data(df_prepared)
-        plot_results(df_monthly, future_dates, y_future)
+        df_prepared = process_data(uploaded_file)
+        if df_prepared is not None:
+            df_monthly, future_dates, y_future = model_data(df_prepared)
+            plot_results(df_monthly, future_dates, y_future)
 
 if __name__ == "__main__":
     main()
