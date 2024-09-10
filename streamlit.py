@@ -36,8 +36,8 @@ if uploaded_file is not None:
     # Drop rows where Description or CustomerID are missing
     df = df.dropna(subset=['Description', 'CustomerID'])
 
-    # Drop rows where Quantity is negative
-    df = df[df['Quantity','UnitPrice', 'CustomerID'] > 0]
+    # Drop rows where Quantity, UnitPrice, or CustomerID are negative or zero
+    df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
 
     # Hide preprocessing, just show the results
 
