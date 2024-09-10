@@ -21,18 +21,23 @@ st.write('This app provides various sales data visualizations and insights.')
 uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
 
 if uploaded_file is not None:
-    # Load data and preprocess without displaying preprocessing steps
+    # Load the dataset
     df = pd.read_csv(uploaded_file)
 
-    # Preprocess Data
-    df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-    df['Month'] = df['InvoiceDate'].dt.strftime('%Y-%m')
-    df['Week'] = df['InvoiceDate'].dt.strftime('%Y-%U')
-    df['Quarter'] = df['InvoiceDate'].dt.to_period('Q')
-    df['Year'] = df['InvoiceDate'].dt.year
-    df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek
-    df['IsWeekend'] = df['DayOfWeek'] >= 5
-    df['Sales'] = df['UnitPrice'] * df['Quantity']
+    # Preprocessing: Mapping StockCode to most common Description and cleaning
+    stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode().iloc[0] if not x.mode().empty else None).to_dict()
+
+    # Fill missing Description values based on the StockCode
+    df['Description'] = df.apply(
+        lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
+        axis=1
+    )
+
+    # Drop rows where Description or CustomerID are missing
+    df = df.dropna(subset=['Description', 'CustomerID'])
+
+    # Drop rows where Quantity is negative
+    df = df[df['Quantity','UnitPrice', 'CustomerID'] > 0]
 
     # Hide preprocessing, just show the results
 
