@@ -113,11 +113,12 @@ def plot_results(df_monthly, future_dates, y_future):
     plt.figure(figsize=(14, 7))
     plt.plot(df_monthly.index, df_monthly['Sales_diff'], label='Historical Sales', color='blue')
     plt.plot(future_dates, y_future, label='Linear Regression Predictions', linestyle='--', color='red')
-    plt.title('Historical andForecasted Monthly Sales (Linear Regression)")
+    plt.title('Historical and Forecasted Monthly Sales (Linear Regression)')  # Corrected line
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
     plt.show()
+
 
 def main():
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
