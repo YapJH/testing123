@@ -12,11 +12,6 @@ def load_data():
     return None
 
 def clean_data(df):
-    # Check for 'Sales' column
-    if 'Sales' not in df.columns:
-        st.error("Uploaded file does not contain a 'Sales' column. Please check your CSV file.")
-        return None
-    
     # Data cleaning process
     df = df.dropna(subset=['Description', 'CustomerID'])  # Dropping rows where 'Description' or 'CustomerID' is NaN
     df = df[df['Quantity'] > 0]  # Removing rows with non-positive quantities
