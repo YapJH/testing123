@@ -6,9 +6,9 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import CountVectorizer
 import plotly.express as px
+from pandas.plotting import scatter_matrix
 import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
-from pandas.plotting import scatter_matrix
 
 # Set the style of seaborn
 sns.set(style="whitegrid")
@@ -24,7 +24,7 @@ if uploaded_file is not None:
     # Load data and preprocess without displaying preprocessing steps
     df = pd.read_csv(uploaded_file)
 
-    # Preprocess Data: Parsing dates and generating new features
+    # Preprocess Data
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
     df['Month'] = df['InvoiceDate'].dt.strftime('%Y-%m')
     df['Week'] = df['InvoiceDate'].dt.strftime('%Y-%U')
@@ -42,60 +42,10 @@ if uploaded_file is not None:
     if st.checkbox('Show Raw Data'):
         st.write(df.head())
 
-    # Monthly Sales Quantity Over Time
-    monthly_sales = df.groupby('Month').agg({'Quantity': 'sum'}).reset_index()
-    plt.figure(figsize=(12, 6))
-    plt.plot(monthly_sales['Month'], monthly_sales['Quantity'], marker='o')
-    plt.xticks(rotation=45)
-    plt.title('Monthly Sales Quantity Over Time')
-    plt.xlabel('Month')
-    plt.ylabel('Total Quantity Sold')
-    plt.grid(True)
-    st.pyplot(plt)
-
-    # Weekly Sales Quantity Over Time
-    weekly_sales = df.groupby('Week').agg({'Quantity': 'sum'}).reset_index()
-    plt.figure(figsize=(12, 6))
-    plt.plot(weekly_sales['Week'], weekly_sales['Quantity'], marker='o')
-    plt.xticks(rotation=45)
-    plt.title('Weekly Sales Quantity Over Time')
-    plt.xlabel('Week')
-    plt.ylabel('Total Quantity Sold')
-    plt.grid(True)
-    st.pyplot(plt)
-
-    # Quarterly Sales Quantity Over Time
-    quarterly_sales = df.groupby('Quarter').agg({'Quantity': 'sum'}).reset_index()
-    quarterly_sales['Quarter'] = quarterly_sales['Quarter'].astype(str)
-    plt.figure(figsize=(12, 6))
-    plt.plot(quarterly_sales['Quarter'], quarterly_sales['Quantity'], marker='o')
-    plt.xticks(rotation=45)
-    plt.title('Quarterly Sales Quantity Over Time')
-    plt.xlabel('Quarter')
-    plt.ylabel('Total Quantity Sold')
-    plt.grid(True)
-    st.pyplot(plt)
-
-    st.subheader('Top 20 Countries by Revenue')
-
-    # Calculate sales by country
-    country_revenue = df.groupby('Country').agg({'Sales': 'sum'}).reset_index()
-    top_country = country_revenue.sort_values(by='Sales', ascending=False).head(20)
-    plt.figure(figsize=(15, 5))
-    bars = plt.bar(top_country['Country'], top_country['Sales'], color='#37C6AB', edgecolor='black', linewidth=1)
-    plt.yscale('log')
-    plt.xticks(rotation=90)
-    plt.title('Top 20 Countries by Revenue (Log Scale)')
-    plt.xlabel('Country')
-    plt.ylabel('Sales')
-    for bar in bars:
-        yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2, yval, f'${int(yval):,}', ha='center', va='bottom', fontsize=10, rotation=90)
-    st.pyplot(plt)
-
+    # --- Sales Data Visualizations ---
     st.subheader('Sales Data Over Time')
 
-    # Scatter plot of sales over time
+    # Sales Data Visualization Over Years
     plt.figure(figsize=(14, 7))
     plt.scatter(df['InvoiceDate'], df['Sales'], color='blue', marker='o', s=10, alpha=0.5)
     plt.gca().xaxis.set_major_locator(mdates.YearLocator())
@@ -103,24 +53,48 @@ if uploaded_file is not None:
     plt.gcf().autofmt_xdate()
     plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-    plt.title('Sales Data Over Years')
+    plt.title('Sales Data Visualization Over Years')
     plt.xlabel('Year')
     plt.ylabel('Sales')
     plt.legend(['Individual Sales'], loc='upper left')
     st.pyplot(plt)
 
-    st.subheader('Customer Behavior Analysis')
-
-    # Top 10 customers by sales
-    customer_sales = df.groupby('CustomerID')['Sales'].sum().sort_values(ascending=False)
-    plt.figure(figsize=(10, 4))
-    customer_sales.head(10).plot(kind='bar')
-    plt.title('Top 10 Customers by Sales')
-    plt.xlabel('CustomerID')
-    plt.ylabel('Total Sales')
+    # --- Pivot Table Visualization ---
+    st.subheader('Average Sales by Month and Day of Week')
+    pivot_table = df.pivot_table(values='Sales', index='Month', columns='DayOfWeek', aggfunc='mean')
+    sns.heatmap(pivot_table, annot=True, cmap='coolwarm', fmt=".0f")
+    plt.title('Average Sales by Month and Day of Week')
     st.pyplot(plt)
 
-    # Clustering for customer segmentation
+    # --- Correlation Heatmap ---
+    st.subheader('Correlation Heatmap')
+
+    numeric_df = df.select_dtypes(include=[np.number])
+    corr_matrix = numeric_df.corr()
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+    plt.title('Correlation Heatmap')
+    st.pyplot(plt)
+
+    # --- Frequency of Categorical Features ---
+    st.subheader('Frequency of Categorical Features')
+
+    categorical_features = ['Country', 'Week', 'DayOfWeek', 'IsWeekend']
+    for feature in categorical_features:
+        plt.figure(figsize=(10, 4))
+        chart = sns.countplot(x=feature, data=df, order=df[feature].value_counts().index)
+        chart.set_xticklabels(chart.get_xticklabels(), rotation=45)
+        plt.title(f'Frequency of {feature}')
+        st.pyplot(plt)
+
+    # --- Scatter Plot Matrix ---
+    st.subheader('Scatter Plot Matrix')
+
+    attributes = ['Sales', 'UnitPrice', 'Quantity', 'Year']
+    scatter_matrix(df[attributes], figsize=(12, 8), alpha=0.2)
+    st.pyplot(plt)
+
+    # --- K-means for Customer Segmentation ---
     st.subheader('Customer Segmentation Using K-means')
 
     features = df[['Sales', 'Quantity', 'UnitPrice']]
@@ -131,7 +105,7 @@ if uploaded_file is not None:
     plt.title('Customer Segmentation by Sales and Unit Price')
     st.pyplot(plt)
 
-    # Text analysis of descriptions
+    # --- Text Analysis of Descriptions ---
     st.subheader('Top 20 Most Frequent Terms in Product Descriptions')
 
     vect = CountVectorizer(stop_words='english')
@@ -145,19 +119,20 @@ if uploaded_file is not None:
     plt.title('Top 20 Most Frequent Terms in Product Descriptions')
     st.pyplot(plt)
 
-    # Scatter plot matrix
-    st.subheader('Scatter Matrix of Selected Variables')
+    # --- Cross-tabulation of Weekday vs. IsWeekend ---
+    st.subheader('Cross-Tabulation of Weekday vs. IsWeekend')
 
-    attributes = ['Sales', 'UnitPrice', 'Quantity']
-    scatter_matrix(df[attributes], figsize=(12, 8), alpha=0.2)
-    st.pyplot(plt)
+    weekend_cross = pd.crosstab(index=df['DayOfWeek'], columns=df['IsWeekend'])
+    st.write(weekend_cross)
 
-    # Correlation heatmap
-    st.subheader('Correlation Heatmap')
+    # --- Sales Quantity by Country Choropleth ---
+    st.subheader('Sales Quantity by Country')
 
-    numeric_df = df.select_dtypes(include=[np.number])
-    corr_matrix = numeric_df.corr()
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
-    plt.title('Correlation Heatmap')
-    st.pyplot(plt)
+    country_sales = df.groupby('Country')['Quantity'].sum().reset_index()
+    fig = px.choropleth(country_sales, locations="Country",
+                        locationmode='country names',
+                        color="Quantity",
+                        hover_name="Country",
+                        color_continuous_scale="Viridis",
+                        title="Sales Quantity by Country")
+    st.plotly_chart(fig)
