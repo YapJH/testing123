@@ -85,6 +85,12 @@ def check_stationarity(df):
 
 # Function to train different models and plot results
 def model_data_and_plot(df, model_type='Linear Regression'):
+    # Ensure necessary columns exist before aggregation
+    required_columns = ['Sales', 'UnitPrice', 'Country_Encoded']
+    if not all(col in df.columns for col in required_columns):
+        st.error(f"The dataset is missing required columns: {required_columns}")
+        return
+
     # Aggregate existing data to monthly
     df_monthly = df.resample('M').agg({
         'Sales': 'sum',
