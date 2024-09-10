@@ -9,13 +9,21 @@ from statsmodels.tsa.stattools import kpss
 def process_data(uploaded_file):
     try:
         if uploaded_file is not None:
-            # Read the CSV file
-            df = pd.read_csv(uploaded_file)
+            # Read the first few bytes to confirm the file contains data
+            file_contents = uploaded_file.getvalue()
+            if not file_contents:
+                st.error("The uploaded file is empty. Please upload a file with data.")
+                return None
             
+            # Debugging step: Show the raw content of the file
+            st.write(file_contents[:1000])  # Show the first 1000 bytes for debugging
+
+            # Proceed with reading the CSV
+            df = pd.read_csv(uploaded_file)
+
             if df.empty:
                 st.error("The uploaded CSV file is empty. Please upload a file with data.")
                 return None
-            
             # Ensure 'UnitPrice' and 'Quantity' columns exist
             if 'UnitPrice' not in df.columns or 'Quantity' not in df.columns:
                 st.error("Required columns 'UnitPrice' or 'Quantity' are missing in the uploaded file.")
