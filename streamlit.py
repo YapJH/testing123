@@ -43,26 +43,32 @@ def check_stationarity(df):
             if st.checkbox('Apply differencing despite stationarity?'):
                 apply_differencing(df)
         else:
-            st.write("The log-transformed data is not trend stationary, automatically applying differencing.")
+            st.write("The log-transformed data is not trend stationary, applying differencing.")
             apply_differencing(df)
     else:
         st.error("The 'Sales' column is required for stationarity checks but is not present in the DataFrame.")
 
 def apply_differencing(df):
+    # Log transformation and differencing
     df['Sales_diff'] = df['Sales_log'].diff().dropna()
 
+    # Apply seasonal differencing (e.g., period=12 for monthly data)
+    df['Sales_seasonal_diff'] = df['Sales_log'].diff(12).dropna()
+
+    # Plot the differenced data
     plt.figure(figsize=(10, 6))
-    plt.plot(df['Sales_diff'], label='Differenced Sales Log')
-    plt.title('First-Order Differenced Log-Transformed Sales Data')
+    plt.plot(df['Sales_seasonal_diff'], label='Seasonally Differenced Sales Log')
+    plt.title('Seasonal Differencing of Log-Transformed Sales Data')
     plt.xlabel('Date')
-    plt.ylabel('Differenced Log(Sales)')
+    plt.ylabel('Seasonally Differenced Log(Sales)')
     plt.legend()
     plt.grid(True)
     st.pyplot()
 
-    kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
-    st.write('KPSS Statistic (differenced):', kpss_result_diff[0])
-    st.write('KPSS p-value (differenced):', kpss_result_diff[1])
+    # Re-run the KPSS test on the seasonally differenced data
+    kpss_seasonal = kpss(df['Sales_seasonal_diff'].dropna(), regression='c')
+    st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
+    st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
 
 def main():
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
