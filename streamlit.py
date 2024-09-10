@@ -10,7 +10,6 @@ from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
 from sklearn.neural_network import MLPRegressor
 
-
 def process_data(uploaded_file):
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
@@ -96,6 +95,14 @@ def model_data_and_plot(df, model_type='Linear Regression'):
         'Sales': 'sum',
         'UnitPrice': 'mean'
     }).reset_index()
+
+    # Re-create the missing columns after resampling
+    df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
+    df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
+    df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
+
+    # Debugging statement to check available columns
+    st.write("Available columns in df_monthly:", df_monthly.columns)
 
     # Prepare data for modeling
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
