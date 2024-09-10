@@ -5,14 +5,9 @@ import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import kpss
 
 def process_data(uploaded_file):
-    if uploaded_file is not None:
+    uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
-        if 'Sales' not in df.columns:
-            st.error("The uploaded file does not contain a 'Sales' column. Please check your CSV file.")
-            return None
-        # Continue with further processing if the 'Sales' column is present
-        # Your existing data processing code here
-        return df
+
     return None
 
 
