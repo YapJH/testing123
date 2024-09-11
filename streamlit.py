@@ -227,14 +227,17 @@ def monthly_sales_linear_regression(df_monthly):
     lin_sales_predictions = lin_model.predict(combined_data)
 
     # Plotting the results
-    plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
-    plt.plot(future_dates, lin_sales_predictions, label='Linear Regression Predictions', linestyle='--', color='red')
-    plt.title('Historical and Forecasted Monthly Sales (Linear Regression)')
-    plt.xlabel('Date')
-    plt.ylabel('Sales')
-    plt.legend()
-    plt.show()
+    fig, ax = plt.subplots(figsize=(14, 7))  # Create a figure and axis for plotting
+    ax.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    ax.plot(future_dates, lin_sales_predictions, label='Linear Regression Predictions', linestyle='--', color='red')
+    ax.set_title('Historical and Forecasted Monthly Sales (Linear Regression)')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Sales')
+    ax.legend()
+
+    # Use st.pyplot to display the plot in Streamlit
+    st.pyplot(fig)
+
 
 
 def main():
