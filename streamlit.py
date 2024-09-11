@@ -10,108 +10,57 @@ from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
 from sklearn.neural_network import MLPRegressor
 
+# Process the data from the CSV file
 def process_data(uploaded_file):
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
-        
-        # Calculate Sales by multiplying UnitPrice and Quantity
-        df['Sales'] = df['UnitPrice'] * df['Quantity']
-        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])  # Ensure 'InvoiceDate' is in datetime
-        df.set_index('InvoiceDate', inplace=True)
 
-        df['Month'] = df.index.month
-        df['DayOfWeek'] = df.index.dayofweek
-        df['IsWeekend'] = df['DayOfWeek'] >= 5
-        
-        # Create a mapping of StockCode to the most common Description
-        stockcode_description_map = df.groupby('StockCode')['Description'].apply(
-            lambda x: x.mode().iloc[0] if not x.mode().empty else None
-        ).to_dict()
+        # Check for necessary columns
+        if all(col in df.columns for col in ['UnitPrice', 'Quantity', 'InvoiceDate']):
+            # Calculate Sales
+            df['Sales'] = df['UnitPrice'] * df['Quantity']
+            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])  # Convert to datetime
+            df.set_index('InvoiceDate', inplace=True)
 
-        # Fill missing Description values based on the StockCode
-        df['Description'] = df.apply(
-            lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
-            axis=1
-        )
+            # Feature Engineering
+            df['Month'] = df.index.month
+            df['DayOfWeek'] = df.index.dayofweek
+            df['IsWeekend'] = df['DayOfWeek'] >= 5
 
-        # Drop rows with missing Description or CustomerID
-        df = df.dropna(subset=['Description', 'CustomerID'])
-
-        # Remove rows with non-positive values in specified columns
-        df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
-
-        return df
+            # Drop rows with missing essential data
+            df = df.dropna(subset=['CustomerID', 'Description'])
+            # Filter out invalid data
+            df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0)]
+            return df
+        else:
+            st.error("The uploaded file must contain 'UnitPrice', 'Quantity', and 'InvoiceDate' columns.")
     return None
 
-def apply_differencing(df):
-    # Log transformation and differencing
-    df['Sales_diff'] = df['Sales_log'].diff().dropna()
-
-    # Apply seasonal differencing (e.g., period=12 for monthly data)
-    df['Sales_seasonal_diff'] = df['Sales_log'].diff(12).dropna()
-
-    # Plot the differenced data
-    plt.figure(figsize=(10, 6))
-    plt.plot(df['Sales_seasonal_diff'], label='Seasonally Differenced Sales Log')
-    plt.title('Seasonal Differencing of Log-Transformed Sales Data')
-    plt.xlabel('Date')
-    plt.ylabel('Seasonally Differenced Log(Sales)')
-    plt.legend()
-    plt.grid(True)
-    st.pyplot()
-
-    # Re-run the KPSS test on the seasonally differenced data
-    kpss_seasonal = kpss(df['Sales_seasonal_diff'].dropna(), regression='c')
-    st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
-    st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
-
-def check_stationarity(df):
-    if 'Sales' in df.columns:
-        df['Sales_log'] = np.log(df['Sales'] + 1)
-        kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
-        st.write('KPSS Statistic:', kpss_result[0])
-        st.write('p-value:', kpss_result[1])
-
-        if kpss_result[1] < 0.05:
-            st.write("The log-transformed data is trend stationary.")
-            if st.checkbox('Apply differencing despite stationarity?'):
-                apply_differencing(df)
-        else:
-            st.write("The log-transformed data is not trend stationary, applying differencing.")
-            apply_differencing(df)
-    else:
-        st.error("The 'Sales' column is required for stationarity checks but is not present in the DataFrame.")
-
-# Function to train different models and plot results
-def model_data_and_plot(df, model_type='Linear Regression'):
-    # Ensure necessary columns exist before aggregation
-    required_columns = ['Sales', 'UnitPrice']
-    if not all(col in df.columns for col in required_columns):
-        st.error(f"The dataset is missing required columns: {required_columns}")
+# Function to handle predictions and plotting for all models, with yearly option
+def model_and_predict(df, model_type='Linear Regression', resample_type='M'):
+    if not all(col in df.columns for col in ['Sales', 'UnitPrice']):
+        st.error(f"The dataset is missing required columns: ['Sales', 'UnitPrice']")
         return
 
-    # Aggregate existing data to monthly
-    df_monthly = df.resample('M').agg({
-        'Sales': 'sum',
-        'UnitPrice': 'mean'
-    }).reset_index()
+    # Choose to resample by month or by year
+    if resample_type == 'Y':  # Resample yearly
+        df_resampled = df.resample('Y').agg({'Sales': 'sum', 'UnitPrice': 'mean'}).reset_index()
+    else:  # Resample monthly by default
+        df_resampled = df.resample('M').agg({'Sales': 'sum', 'UnitPrice': 'mean'}).reset_index()
 
     # Re-create the missing columns after resampling
-    df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
-    df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
-    df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
+    df_resampled['Month'] = df_resampled['InvoiceDate'].dt.month
+    df_resampled['DayOfWeek'] = df_resampled['InvoiceDate'].dt.dayofweek
+    df_resampled['IsWeekend'] = df_resampled['DayOfWeek'] >= 5
 
-    # Debugging statement to check available columns
-    st.write("Available columns in df_monthly:", df_monthly.columns)
+    # Features and target
+    X = df_resampled[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
+    y = df_resampled['Sales']
 
-    # Prepare data for modeling
-    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
-    y = df_monthly['Sales']
-
-    # Splitting the data into training and testing sets
+    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Select the model
+    # Select model
     if model_type == 'Linear Regression':
         model = LinearRegression()
     elif model_type == 'KNN':
@@ -128,55 +77,67 @@ def model_data_and_plot(df, model_type='Linear Regression'):
         st.error("Invalid model type selected.")
         return
 
-    # Train the selected model
+    # Train the model
     model.fit(X_train, y_train)
 
-    # Prepare future dates for prediction
-    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    # Prepare future data for prediction (next 12 months or years)
+    if resample_type == 'Y':  # Forecast for the next 12 years
+        future_dates = pd.date_range(start=df_resampled['InvoiceDate'].max() + pd.DateOffset(years=1), periods=12, freq='Y')
+    else:  # Forecast for the next 12 months
+        future_dates = pd.date_range(start=df_resampled['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    
     future_data = pd.DataFrame(index=future_dates)
     future_data['Month'] = future_data.index.month
     future_data['DayOfWeek'] = future_data.index.dayofweek
-    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
+    future_data['UnitPrice'] = df_resampled['UnitPrice'].mean()  # Assuming constant UnitPrice
     future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
-
-    # Ensure the order of features matches the model's expectations
     future_data = future_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
 
-    # Generate predictions for the future period
-    future_predictions = model.predict(future_data)
+    # Predict future sales
+    future_sales_predictions = model.predict(future_data)
 
-    # Plot the results
+    # Plot historical and future predictions
     plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
-    plt.plot(future_dates, future_predictions, label=f'{model_type} Predictions', linestyle='--', color='red')
-    plt.title(f'Historical and Forecasted Monthly Sales ({model_type})')
+    plt.plot(df_resampled['InvoiceDate'], y, label='Historical Sales', color='blue')
+    plt.plot(future_dates, future_sales_predictions, label=f'{model_type} Predictions', linestyle='--', color='red')
+    if resample_type == 'Y':
+        plt.title(f'Historical and Forecasted Yearly Sales ({model_type})')
+    else:
+        plt.title(f'Historical and Forecasted Monthly Sales ({model_type})')
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
     st.pyplot()
 
-# Streamlit application
+# Streamlit app
 def main():
-    st.title('Sales Forecasting App')
-    st.write('Upload your sales data (CSV format) and choose a machine learning model to forecast future sales.')
+    st.title("Sales Forecasting with Machine Learning Models")
+    st.write("Upload a sales data CSV file and select a machine learning model for forecasting future sales.")
 
-    # File uploader
-    uploaded_file = st.file_uploader("Upload a CSV file", type="csv")
-
-    if uploaded_file:
-        # Process the uploaded data
+    # File upload
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    
+    # If a file is uploaded
+    if uploaded_file is not None:
+        # Process the data
         df = process_data(uploaded_file)
 
         if df is not None:
-            st.write("Data preview:")
+            st.write("Data Preview:")
             st.write(df.head())
 
             # Model selection
-            model_type = st.selectbox('Choose a model for forecasting', 
+            model_type = st.selectbox('Select a Machine Learning Model', 
                                       ['Linear Regression', 'KNN', 'Random Forest', 'Decision Tree', 'XGBoost', 'Neural Network'])
 
-            # Run the model and display forecast
-            model_data_and_plot(df, model_type=model_type)
+            # Resample type selection (monthly or yearly)
+            resample_type = st.selectbox('Choose resampling period (Monthly or Yearly)', ['Monthly', 'Yearly'])
+
+            # Run model and plot predictions
+            if resample_type == 'Monthly':
+                model_and_predict(df, model_type=model_type, resample_type='M')
+            else:
+                model_and_predict(df, model_type=model_type, resample_type='Y')
         else:
             st.error("Error processing the file. Please check the format.")
     else:
