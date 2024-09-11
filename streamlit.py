@@ -37,11 +37,20 @@ def process_data(uploaded_file):
     return None
 
 def apply_transformations(df):
+    if df.index.duplicated().any():
+        st.warning('Duplicate dates found! Data may not process correctly.')
+        # Optionally, resolve duplicates or decide on a policy to handle them
+        # e.g., df = df[~df.index.duplicated(keep='first')]
+    
     # Log transformation
     df['Sales_log'] = np.log(df['Sales'] + 1)
-    # First order differencing
     df['Sales_diff'] = df['Sales_log'].diff().dropna()
     
+    # Check if the result is empty after dropping NA
+    if df['Sales_diff'].empty:
+        st.error('No data available after differencing. Check your data input.')
+        return None
+
     # Plotting the differenced data
     plt.figure(figsize=(10, 6))
     plt.plot(df.index, df['Sales_diff'], label='Differenced Sales Log')
@@ -53,18 +62,14 @@ def apply_transformations(df):
     st.pyplot()
 
     # KPSS test
-    kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
-    st.write(f'KPSS Statistic (differenced): {kpss_result_diff[0]}')
-    st.write(f'KPSS p-value (differenced): {kpss_result_diff[1]}')
-
-    # Seasonal differencing if required
-    if st.checkbox("Apply Seasonal Differencing?"):
-        df['Sales_seasonal_diff'] = df['Sales_log'].diff(12).dropna()
-        kpss_seasonal = kpss(df['Sales_seasonal_diff'].dropna(), regression='c')
-        st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
-        st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
+    if not df['Sales_diff'].dropna().empty:
+        from statsmodels.tsa.stattools import kpss
+        kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
+        st.write(f'KPSS Statistic (differenced): {kpss_result_diff[0]}')
+        st.write(f'KPSS p-value (differenced): {kpss_result_diff[1]}')
 
     return df
+
 
 
 # Function to handle predictions and plotting for all models, with yearly option
