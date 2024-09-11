@@ -353,6 +353,338 @@ def yearly_sales_knn(new_df):
     # Use st.pyplot to display the plot in Streamlit
     st.pyplot(fig)
 
+def monthly_sales_random_forest(df_monthly):
+    # Prepare features and target variables
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  # Example features
+    y = df_monthly['Sales_diff']  # Target
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and train the Random Forest model
+    random_forest_model = RandomForestRegressor(n_estimators=100, random_state=42)
+    random_forest_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
+    combined_data['IsWeekend'] = combined_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    combined_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]  # Most frequent value
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period using the trained Random Forest model
+    combined_sales_predictions = random_forest_model.predict(combined_data)
+
+    # Plotting the results
+    fig, ax = plt.subplots(figsize=(14, 7))  # Create a figure and axis for plotting
+    ax.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    ax.plot(future_dates, combined_sales_predictions, label='Model Predictions (Random Forest)', linestyle='--', color='red')
+    ax.set_title('Historical and Forecasted Monthly Sales (Random Forest)')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Sales')
+    ax.legend()
+
+    # Use st.pyplot to display the plot in Streamlit
+    st.pyplot(fig)
+
+
+
+def yearly_sales_random_forest(new_df):
+    # Prepare features and target variables
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  # Example features
+    y = new_df['Sales_diff']  # Target
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and train the Random Forest model
+    random_forest_model = RandomForestRegressor(n_estimators=100, random_state=42)
+    random_forest_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  # Assuming constant unit price
+    combined_data['IsWeekend'] = 0  # Assuming non-weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  # Most frequent or specific value
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period using the trained Random Forest model
+    combined_sales_predictions = random_forest_model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+    plt.plot(new_df.index, y, label='Historical Sales', color='blue')
+    plt.plot(future_dates, combined_sales_predictions, label='Model Predictions (Random Forest)', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Sales (Random Forest)')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+    # Display the plot in Streamlit
+    st.pyplot(plt)
+
+
+def monthly_sales_XGBoost(df_monthly):
+    # Prepare features and target variables
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  
+    y = df_monthly['Sales_diff']  
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the XGBRegressor model
+    xgb_model = XGBRegressor(n_estimators=100, learning_rate=0.1)
+    xgb_model.fit(X_train, y_train)
+
+    # Prepare future dates for prediction
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  
+    combined_data['IsWeekend'] = combined_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    combined_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]  
+
+    # Generate predictions from XGBoost model
+    xgb_predictions = xgb_model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(10, 5))  # Adjust figure size to your preference
+    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    plt.plot(future_dates, xgb_predictions, label='XGBoost Predictions', linestyle='--', color='red')
+    plt.title('XGBoost Predictions')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.grid(True)  # Add grid for better readability
+    plt.tight_layout()
+    plt.show()
+
+    # Display the plot in Streamlit
+    st.pyplot(plt)
+
+
+
+def yearly_sales_XGBoost(new_df):
+    # Prepare features and target variables
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  
+    y = new_df['Sales_diff']  
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the XGBRegressor model
+    model = XGBRegressor(n_estimators=100, learning_rate=0.1)
+    model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  
+    combined_data['IsWeekend'] = 0  # Assuming non-weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+    plt.plot(new_df.index, y, label='Historical Sales')
+    plt.plot(future_dates, combined_sales_predictions, label='Model Predictions', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Sales (XGBoost)')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+    # Display the plot in Streamlit
+    st.pyplot(plt)
+
+
+def monthly_sales_decision_tree(df_monthly):
+    # Prepare features and target variables
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  
+    y = df_monthly['Sales_diff']  
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the Decision Tree model
+    decision_tree_model = DecisionTreeRegressor(random_state=42)
+    decision_tree_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  
+    combined_data['IsWeekend'] = 0  # Assuming non-weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = decision_tree_model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    plt.plot(future_dates, combined_sales_predictions, label='Model Predictions (Decision Tree)', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Monthly Sales (Decision Tree)')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+    # Display the plot in Streamlit
+    st.pyplot(plt)
+
+
+def yearly_sales_decision_tree(new_df):
+    # Prepare features and target variables
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  
+    y = new_df['Sales_diff']  
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the Decision Tree model
+    decision_tree_model = DecisionTreeRegressor(random_state=42)
+    decision_tree_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  
+    combined_data['IsWeekend'] = 0  # Assuming non-weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = decision_tree_model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+    plt.plot(new_df.index, y, label='Historical Sales', color='blue')
+    plt.plot(future_dates, combined_sales_predictions, label='Model Predictions (Decision Tree)', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Sales (Decision Tree)')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+    # Display the plot in Streamlit (if using Streamlit)
+    st.pyplot(plt)
+
+
+def monthly_sales_neural_network(df_monthly):
+    # Prepare features and target variables
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  
+    y = df_monthly['Sales_diff']  
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the Neural Network model
+    neural_network_model = MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
+    neural_network_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # constant unit price
+    combined_data['IsWeekend'] = combined_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    combined_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]  # Most frequent value
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = neural_network_model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    plt.plot(future_dates, combined_sales_predictions, label='Model Predictions (Neural Network)', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Monthly Sales (Neural Network)')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+    # Display the plot in Streamlit (if using Streamlit)
+    st.pyplot(plt)
+
+
+
+def yearly_sales_neural_network(new_df):
+    # Prepare features and target variables
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  # Example features
+    y = new_df['Sales_diff']  # Target
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train the Neural Network model
+    neural_network_model = MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
+    neural_network_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  # constant unit price
+    combined_data['IsWeekend'] = 0  # non-weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  # Most frequent value
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = neural_network_model.predict(combined_data)
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+    plt.plot(new_df.index, y, label='Historical Sales')
+    plt.plot(future_dates, combined_sales_predictions, label='Model Predictions (Neural Network)', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Sales (Neural Network)')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+    # Display the plot in Streamlit (if using Streamlit)
+    st.pyplot(plt)
+
+
+
+
+
 
 
 def main():
@@ -371,7 +703,15 @@ def main():
             yearly_sales_linear_regression(new_df)
             monthly_sales_knn(df_monthly) 
             yearly_sales_knn(new_df)
-            
+            onthly_sales_random_forest(df_monthly)
+            yearly_sales_random_forest(new_df)
+            monthly_sales_XGBoost(df_monthly)
+            yearly_sales_XGBoost(new_df)
+            monthly_sales_decision_tree(df_monthly)
+            yearly_sales_decision_tree(new_df)
+            monthly_sales_neural_network(df_monthly)
+            yearly_sales_neural_network(new_df)
+        
         else:
             st.error("Data could not be processed. Check the file format.")
 
