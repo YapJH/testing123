@@ -126,28 +126,30 @@ def check_stationarity(df):
             data_to_test = data_to_test.diff().dropna()
 
     # Visualization of the final stationary data
-    if not data_to_test.equals(df['Sales_log']):
-        st.subheader("Final Differenced Data for Modeling")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(data_to_test.index, data_to_test, label='Differenced Data')
-        ax.set_title('Differenced Data after Achieving Stationarity')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Differenced Values')
-        ax.legend()
-        ax.grid(True)
-        st.pyplot(fig)
+    st.subheader("Final Differenced Data for Modeling")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(data_to_test.index, data_to_test, label='Differenced Data')
+    ax.set_title('Differenced Data after Achieving Stationarity')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Differenced Values')
+    ax.legend()
+    ax.grid(True)
+    st.pyplot(fig)
+
+    # Return the differenced data (final stationary data)
+    return data_to_test
 
 
 
 
-
-# Function for modeling
-def perform_modeling(check_stationarity):
+def perform_modeling(df_stationary):
     # Aggregate data to monthly
-    df_monthly = df_cleaned.resample('M').agg({
+    df_monthly = df_stationary.resample('M').agg({
         'Sales': 'sum',
         'UnitPrice': 'mean'
     }).reset_index()
+    
+    # Feature engineering
     df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
     df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
@@ -186,7 +188,7 @@ def perform_modeling(check_stationarity):
 
     # Plot results
     plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales')
+    plt.plot(df_monthly['InvoiceDate'], df_monthly['Sales'], label='Historical Sales')
     plt.plot(future_dates, future_sales_predictions, 'r--', label='Predicted Sales')
     plt.title('Sales Forecast')
     plt.xlabel('Date')
@@ -195,18 +197,18 @@ def perform_modeling(check_stationarity):
     plt.grid(True)
     st.pyplot()
 
-# Main function to coordinate everything
+
+
 def main():
     st.title("Sales Data Analysis")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
     if uploaded_file is not None:
-        # Using the uploaded file directly since the stream is handled by process_data now
         df_cleaned = process_data(uploaded_file)
         if df_cleaned is not None:
             perform_eda(df_cleaned)
-            check_stationarity(df_cleaned)
-            perform_modeling(check_stationarity)  # Add this call to the modeling function
+            df_stationary = check_stationarity(df_cleaned)  # Get the stationary data
+            perform_modeling(df_stationary)  # Use the stationary data for modeling
         else:
             st.error("Data could not be processed. Check the file format.")
 
