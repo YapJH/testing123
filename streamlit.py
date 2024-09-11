@@ -21,6 +21,16 @@ def process_data(uploaded_file):
 
         # Ensure 'InvoiceDate' is in datetime format
         df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+        
+        # Extract year, month, day, day of the week, hour from 'InvoiceDate'
+        df['Year'] = df['InvoiceDate'].dt.year
+        df['Month'] = df['InvoiceDate'].dt.month
+        df['Day'] = df['InvoiceDate'].dt.day
+        df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek
+        df['Hour'] = df['InvoiceDate'].dt.hour
+
+        # Create a boolean column 'IsWeekend' indicating whether the day is a weekend
+        df['IsWeekend'] = df['DayOfWeek'] >= 5  # True for Saturday and Sunday
 
         # Mapping descriptions to stock codes and filling missing descriptions
         stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode()[0] if not x.mode().empty else None).to_dict()
