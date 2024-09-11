@@ -12,6 +12,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import kpss
 
+# Title for the app
+st.title("Sales Data Analysis")
+
 
 # Function to process the uploaded data
 def process_data(uploaded_file):
@@ -119,18 +122,13 @@ def check_stationarity(df):
     else:
         st.write("The log-transformed data is not trend stationary, suggesting differencing might be needed.")
 
+# Main function to coordinate the flow
 def main():
-    st.title("Sales Data Analysis")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
-        if df is not None:
-            df_cleaned = process_data(df)
-            perform_eda(df_cleaned)
-            check_stationarity(df_cleaned)
-        else:
-            st.error("Data could not be processed. Check the file format.")
+        df = process_data(uploaded_file)
+        perform_eda(df)
+        check_stationarity(df)
 
 if __name__ == "__main__":
     main()
