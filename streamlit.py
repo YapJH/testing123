@@ -18,46 +18,42 @@ from sklearn.preprocessing import LabelEncoder  # Make sure this is at the top o
 def process_data(uploaded_file):
     if uploaded_file is not None:
         try:
+            df = pd.read_csv(uploaded_file)
+            # Ensure 'InvoiceDate' is in datetime format
+            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 
-        df = pd.read_csv(uploaded_file)
+            # Extract year, month, day, day of the week, hour from 'InvoiceDate'
+            df['Year'] = df['InvoiceDate'].dt.year
+            df['Month'] = df['InvoiceDate'].dt.month
+            df['Day'] = df['InvoiceDate'].dt.day
+            df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek
+            df['Hour'] = df['InvoiceDate'].dt.hour
 
-        # Ensure 'InvoiceDate' is in datetime format
-        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+            # Create a boolean column 'IsWeekend' indicating whether the day is a weekend
+            df['IsWeekend'] = df['DayOfWeek'] >= 5  # True for Saturday and Sunday
 
-        # Extract year, month, day, day of the week, hour from 'InvoiceDate'
-        df['Year'] = df['InvoiceDate'].dt.year
-        df['Month'] = df['InvoiceDate'].dt.month
-        df['Day'] = df['InvoiceDate'].dt.day
-        df['DayOfWeek'] = df['InvoiceDate'].dt.dayofweek
-        df['Hour'] = df['InvoiceDate'].dt.hour
+            # Mapping descriptions to stock codes and filling missing descriptions
+            stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode()[0] if not x.mode().empty else None).to_dict()
+            df['Description'] = df.apply(
+                lambda row: stockcode_description_map.get(row['StockCode'], row['Description']) if pd.isnull(row['Description']) else row['Description'],
+                axis=1
+            )
+            
+            # Drop rows with any missing 'Description' or 'CustomerID'
+            df = df.dropna(subset=['Description', 'CustomerID'])
 
-        # Create a boolean column 'IsWeekend' indicating whether the day is a weekend
-        df['IsWeekend'] = df['DayOfWeek'] >= 5  # True for Saturday and Sunday
+            # Filter out rows with non-positive 'Quantity', 'UnitPrice', or missing 'CustomerID'
+            df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
 
-        # Mapping descriptions to stock codes and filling missing descriptions
-        stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode()[0] if not x.mode().empty else None).to_dict()
-        df['Description'] = df.apply(
-            lambda row: stockcode_description_map.get(row['StockCode'], row['Description']) if pd.isnull(row['Description']) else row['Description'],
-            axis=1
-        )
-
-        # Drop rows with any missing 'Description' or 'CustomerID'
-        df = df.dropna(subset=['Description', 'CustomerID'])
-
-        # Filter out rows with non-positive 'Quantity', 'UnitPrice', or missing 'CustomerID'
-        df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
-
-        df['Sales'] = df['UnitPrice'] * df['Quantity']
+            df['Sales'] = df['UnitPrice'] * df['Quantity']
         
-        df = df[df['Quantity'] > 0]
-        df = df[df['UnitPrice'] > 0]
-        
+            df = df[df['Quantity'] > 0]
+            df = df[df['UnitPrice'] > 0]
         return df
-
-  except Exception as e:
-        # You can use Streamlit's error message display to show what went wrong
-        st.error(f"An error occurred: {e}")
-        return None
+except Exception as e:
+# You can use Streamlit's error message display to show what went wrong
+st.error(f"An error occurred: {e}")
+return None
 
 
 # Function for EDA
