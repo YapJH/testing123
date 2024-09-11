@@ -22,7 +22,10 @@ uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 def process_data(uploaded_file):
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
-        
+
+        # Ensure 'InvoiceDate' is in datetime format
+        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+
         # Mapping descriptions to stock codes and filling missing descriptions
         stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode()[0] if not x.mode().empty else None).to_dict()
         df['Description'] = df.apply(
@@ -39,6 +42,7 @@ def process_data(uploaded_file):
         return df
 
     return None
+
 
 # Function for EDA
 def perform_eda(df):
