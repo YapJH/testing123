@@ -239,6 +239,51 @@ def monthly_sales_linear_regression(df_monthly):
     st.pyplot(fig)
 
 
+def yearly_sales_linear_regression(new_df):
+    # Prepare features and target variables
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y = new_df['Sales_diff']
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and train the Linear Regression model
+    lin_model = LinearRegression()
+    lin_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  # Assuming constant unit price
+    combined_data['IsWeekend'] = 0  # Assuming non-weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  # Most frequent or specific value
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    lin_sales_predictions = lin_model.predict(combined_data)
+
+    # Plotting the results
+    fig, ax = plt.subplots(figsize=(14, 7))  # Create a figure and axis for plotting
+    ax.plot(new_df.index, y, label='Historical Sales', color='blue')
+    ax.plot(future_dates, lin_sales_predictions, label='Linear Regression Predictions', linestyle='--', color='red')
+    ax.set_title('Historical and Forecasted Yearly Sales (Linear Regression)')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Sales')
+    ax.legend()
+
+    # Use st.pyplot to display the plot in Streamlit
+    st.pyplot(fig)
+
+
+
+
+
+
+
 
 def main():
     st.title("Sales Data Analysis")
@@ -253,6 +298,7 @@ def main():
             
             # Call the Linear Regression model function
             monthly_sales_linear_regression(df_monthly)  # Use the monthly sales linear regression model
+            yearly_sales_linear_regression(new_df)
         else:
             st.error("Data could not be processed. Check the file format.")
 
