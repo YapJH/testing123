@@ -123,26 +123,16 @@ def check_stationarity(df):
         else:
             st.write("The data is not trend stationary, differencing the data.")
             # Perform differencing and set the differenced data as the next data to test
-            data_to_test = data_to_test.diff().dropna()
+            df['Sales_diff'] = data_to_test.diff().dropna()
+            data_to_test = df['Sales_diff']
 
-    # Visualization of the final stationary data
-    st.subheader("Final Differenced Data for Modeling")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(data_to_test.index, data_to_test, label='Differenced Data')
-    ax.set_title('Differenced Data after Achieving Stationarity')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Differenced Values')
-    ax.legend()
-    ax.grid(True)
-    st.pyplot(fig)
-
-    # Return the differenced data (final stationary data)
-    return data_to_test
+    # Return the entire DataFrame, not just the differenced series
+    return df
 
 
 
 
-# Function for modeling
+
 def perform_modeling(df_stationary):
     # Ensure that InvoiceDate is set as the index
     if 'InvoiceDate' not in df_stationary.columns:
@@ -206,6 +196,7 @@ def perform_modeling(df_stationary):
     st.pyplot()
 
 
+
 def main():
     st.title("Sales Data Analysis")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
@@ -214,10 +205,7 @@ def main():
         df_cleaned = process_data(uploaded_file)
         if df_cleaned is not None:
             perform_eda(df_cleaned)
-            df_stationary = check_stationarity(df_cleaned)  # Get the stationary data
-            perform_modeling(df_stationary)  # Use the stationary data for modeling
+            df_stationary = check_stationarity(df_cleaned)  # Get the stationary DataFrame
+            perform_modeling(df_stationary)  # Use the stationary DataFrame for modeling
         else:
             st.error("Data could not be processed. Check the file format.")
-
-if __name__ == "__main__":
-    main()
