@@ -140,16 +140,24 @@ def check_stationarity(df):
         ax.grid(True)
         st.pyplot(fig)
 
+    # Return the final differenced and stationary data
+    return data_to_test
 
 
-
-# Main function to coordinate the flow
 def main():
+    st.title("Sales Data Analysis")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
     if uploaded_file is not None:
-        df_cleaned = process_data(df)
-        df_stationary = check_stationarity(df_cleaned)
-        # Proceed to model using df_stationary
+        df = pd.read_csv(uploaded_file)
+        if df is not None:
+            df_cleaned = process_data(df)
+            df_stationary = check_stationarity(df_cleaned)
+            # Proceed to model using df_stationary
+            model_results = model_data(df_stationary)
+            st.write(model_results)
+        else:
+            st.error("Data could not be processed. Check the file format.")
 
 if __name__ == "__main__":
     main()
