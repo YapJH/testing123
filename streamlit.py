@@ -21,7 +21,6 @@ def process_data(uploaded_file):
 
         # Ensure 'InvoiceDate' is in datetime format
         df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-        df.set_index('InvoiceDate', inplace=True)
 
         # Extract year, month, day, day of the week, hour from 'InvoiceDate'
         df['Year'] = df['InvoiceDate'].dt.year
