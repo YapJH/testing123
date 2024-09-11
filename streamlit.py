@@ -39,6 +39,11 @@ def process_data(uploaded_file):
         # Filter out rows with non-positive 'Quantity', 'UnitPrice', or missing 'CustomerID'
         df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
 
+        df['Sales'] = df['UnitPrice'] * df['Quantity']
+        
+        df = df[df['Quantity'] > 0]
+        df = df[df['UnitPrice'] > 0]
+        
         return df
 
     return None
