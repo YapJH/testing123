@@ -35,6 +35,66 @@ def process_data(uploaded_file):
 
     return None
 
+# Function for EDA
+def perform_eda(df):
+    # Monthly sales visualization
+    df['Month'] = df['InvoiceDate'].dt.to_period('M')
+    monthly_sales = df.groupby('Month').agg(Total_Sales=('Quantity', 'sum')).reset_index()
+    monthly_sales['Month'] = monthly_sales['Month'].dt.strftime('%Y-%m')
+
+    st.subheader("Monthly Sales")
+    fig, ax = plt.subplots()
+    ax.plot(monthly_sales['Month'], monthly_sales['Total_Sales'], marker='o')
+    ax.set_xticklabels(monthly_sales['Month'], rotation=45)
+    ax.set_title('Monthly Sales Over Time')
+    ax.set_xlabel('Month')
+    ax.set_ylabel('Total Sales')
+    ax.grid(True)
+    st.pyplot(fig)
+
+    # Weekly sales visualization
+    df['Week'] = df['InvoiceDate'].dt.strftime('%Y-%U')
+    weekly_sales = df.groupby('Week').agg(Total_Sales=('Quantity', 'sum')).reset_index()
+
+    st.subheader("Weekly Sales")
+    fig, ax = plt.subplots()
+    ax.plot(weekly_sales['Week'], weekly_sales['Total_Sales'], marker='o')
+    ax.set_xticklabels(weekly_sales['Week'], rotation=45)
+    ax.set_title('Weekly Sales Over Time')
+    ax.set_xlabel('Week')
+    ax.set_ylabel('Total Sales')
+    ax.grid(True)
+    st.pyplot(fig)
+
+    # Quarterly sales visualization
+    df['Quarter'] = df['InvoiceDate'].dt.to_period('Q')
+    quarterly_sales = df.groupby('Quarter').agg(Total_Sales=('Quantity', 'sum')).reset_index()
+    quarterly_sales['Quarter'] = quarterly_sales['Quarter'].astype(str)
+
+    st.subheader("Quarterly Sales")
+    fig, ax = plt.subplots()
+    ax.plot(quarterly_sales['Quarter'], quarterly_sales['Total_Sales'], marker='o')
+    ax.set_xticklabels(quarterly_sales['Quarter'], rotation=45)
+    ax.set_title('Quarterly Sales Over Time')
+    ax.set_xlabel('Quarter')
+    ax.set_ylabel('Total Sales')
+    ax.grid(True)
+    st.pyplot(fig)
+
+    # Scatter plot of sales
+    st.subheader("Scatter Plot of Sales")
+    fig, ax = plt.subplots()
+    ax.scatter(df['InvoiceDate'], df['Sales'], alpha=0.5)
+    ax.xaxis.set_major_locator(MonthLocator())
+    ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+    ax.set_title('Sales Scatter Plot Over Time')
+    ax.set_xlabel('Invoice Date')
+    ax.set_ylabel('Sales')
+    ax.grid(True)
+    plt.gcf().autofmt_xdate()
+    st.pyplot(fig)
+
+
 # Process the data
 df = process_data(uploaded_file)
 
