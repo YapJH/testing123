@@ -74,7 +74,7 @@ def model_and_predict(df, model_type='Linear Regression'):
     elif model_type == 'Random Forest':
         model = RandomForestRegressor(n_estimators=100, random_state=42)
     elif model_type == 'Decision Tree':
-        model = Decision TreeRegressor(random_state=42)
+        model = DecisionTreeRegressor(random_state=42)
     elif model_type == 'XGBoost':
         model = XGBRegressor(n_estimators=100, learning_rate=0.1)
     elif model_type == 'Neural Network':
