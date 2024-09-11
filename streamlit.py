@@ -280,8 +280,78 @@ def yearly_sales_linear_regression(new_df):
 
 
 
+def monthly_sales_knn(df_monthly):
+    # Prepare features and target variables
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y = df_monthly['Sales_diff']
+
+    # Train the KNN model
+    knn_model = KNeighborsRegressor(n_neighbors=5)
+    knn_model.fit(X, y)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
+    combined_data['IsWeekend'] = combined_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    combined_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]  # Most frequent or specific value
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = knn_model.predict(combined_data)
+
+    # Plotting the results
+    fig, ax = plt.subplots(figsize=(14, 7))  # Create a figure and axis for plotting
+    ax.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    ax.plot(future_dates, combined_sales_predictions, label='KNN Predictions', linestyle='--', color='red')
+    ax.set_title('Historical and Forecasted Monthly Sales (KNN)')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Sales')
+    ax.legend()
+
+    # Use st.pyplot to display the plot in Streamlit
+    st.pyplot(fig)
 
 
+def yearly_sales_knn(new_df):
+    # Prepare features and target variables
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  # Example features
+    y = new_df['Sales_diff']  # Target
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and train the KNN model
+    knn_model = KNeighborsRegressor(n_neighbors=5)
+    knn_model.fit(X_train, y_train)
+
+    # Prepare future dates for forecasting
+    future_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = X['UnitPrice'].mean()  # Assuming constant unit price
+    combined_data['IsWeekend'] = 0  # Assuming no weekend for simplicity
+    combined_data['Country_Encoded'] = X['Country_Encoded'].mode()[0]  # Most frequent or specific value
+
+    # Ensure the order of features matches the model's expectations
+    combined_data = combined_data[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+
+    # Generate predictions for the entire period
+    combined_sales_predictions = knn_model.predict(combined_data)
+
+    # Plotting the results
+    fig, ax = plt.subplots(figsize=(14, 7))  # Create a figure and axis for plotting
+    ax.plot(new_df.index, y, label='Historical Sales', color='blue')
+    ax.plot(future_dates, combined_sales_predictions, label='KNN Predictions', linestyle='--', color='red')
+    ax.set_title('Historical and Forecasted Sales (KNN)')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Sales')
+    ax.legend()
+
+    # Use st.pyplot to display the plot in Streamlit
+    st.pyplot(fig)
 
 
 
@@ -299,6 +369,9 @@ def main():
             # Call the Linear Regression model function
             monthly_sales_linear_regression(df_monthly)  # Use the monthly sales linear regression model
             yearly_sales_linear_regression(new_df)
+            monthly_sales_knn(df_monthly) 
+            yearly_sales_knn(new_df)
+            
         else:
             st.error("Data could not be processed. Check the file format.")
 
