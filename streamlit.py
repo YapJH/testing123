@@ -147,9 +147,9 @@ def main():
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
     if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
-        if df is not None:
-            df_cleaned = process_data(df)
+        # Using the uploaded file directly since the stream is handled by process_data now
+        df_cleaned = process_data(uploaded_file)
+        if df_cleaned is not None:
             perform_eda(df_cleaned)
             check_stationarity(df_cleaned)
         else:
