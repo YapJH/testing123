@@ -135,6 +135,18 @@ def check_stationarity(df):
 
 def perform_modeling(df_stationary):
     # Check if the necessary columns exist
+    # Label Encoding StockCode
+    le_stockcode = LabelEncoder()
+    df_stationary['StockCode_Encoded'] = le_stockcode.fit_transform(df_stationary['StockCode'])
+
+    # Label Encoding Country
+    le_country = LabelEncoder()
+    df_stationary['Country_Encoded'] = le_country.fit_transform(df_stationary['Country'])
+
+    # Convert IsWeekend to binary encoding (1 for True, 0 for False)
+    df_stationary['IsWeekend_Encoded'] = df_stationary['IsWeekend'].astype(int)
+
+    
     required_columns = ['Sales_diff', 'UnitPrice', 'Country_Encoded', 'InvoiceDate']
     missing_columns = [col for col in required_columns if col not in df_stationary.columns]
     
