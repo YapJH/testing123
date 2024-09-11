@@ -13,36 +13,46 @@ st.title("Sales Forecasting with Linear Regression")
 # File upload
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
-# Function to process the uploaded file
+# Function to process data
 def process_data(uploaded_file):
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
 
-        # Check for necessary columns
-        if all(col in df.columns for col in ['UnitPrice', 'Quantity', 'InvoiceDate']):
+        # Basic checks for required columns
+        if all(col in df.columns for col in ['StockCode', 'Description', 'UnitPrice', 'Quantity', 'InvoiceDate', 'CustomerID']):
+            # Mapping stock codes to descriptions
+            stockcode_description_map = df.groupby('StockCode')['Description'].apply(
+                lambda x: x.mode().iloc[0] if not x.mode().empty else None).to_dict()
+            df['Description'] = df.apply(
+                lambda row: stockcode_description_map[row['StockCode']] if pd.isnull(row['Description']) else row['Description'],
+                axis=1
+            )
+
+            # Drop rows with missing essential data
+            df = df.dropna(subset=['Description', 'CustomerID'])
+
+            # Remove rows with negative or zero quantities and prices
+            df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0)]
+
             # Calculate Sales
             df['Sales'] = df['UnitPrice'] * df['Quantity']
-            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])   # Convert to datetime
-            df.set_index('InvoiceDate', inplace=True)
+            
+            # Remove rows with zero sales
+            df = df[df['Sales'] != 0]
 
-            # Remove duplicate indices to prevent reindexing issues
-            if not df.index.is_unique:
-                st.warning('Duplicate indices detected. Resetting index to ensure uniqueness.')
-                df = df[~df.index.duplicated(keep='first')]
+            # Convert 'InvoiceDate' to datetime
+            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+            df.set_index('InvoiceDate', inplace=True)
 
             # Feature Engineering
             df['Month'] = df.index.month
             df['DayOfWeek'] = df.index.dayofweek
             df['IsWeekend'] = df['DayOfWeek'] >= 5
 
-            # Drop rows with missing essential data
-            df = df.dropna(subset=['CustomerID', 'Description'])
-            # Filter out invalid data
-            df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0)]
-
             return df
         else:
-            st.error("The uploaded file must contain 'UnitPrice', 'Quantity', and 'InvoiceDate' columns.")
+            st.error("The uploaded file must contain 'StockCode', 'Description', 'UnitPrice', 'Quantity', 'InvoiceDate', 'CustomerID' columns.")
+            return None
     return None
 
 # Preprocess data
