@@ -111,73 +111,32 @@ def perform_eda(df):
 
 # Function to check stationarity
 def check_stationarity(df):
-    if 'Sales' in df.columns:
-        # Basic statistics and visualization
-        st.write("## Basic Statistical Overview of Sales")
-        st.write(df['Sales'].describe())
-        st.write("## Sales Value Counts")
-        st.write(df['Sales'].value_counts().head(10))
+    df['Sales'] = df['UnitPrice'] * df['Quantity']
+    df['Sales_log'] = np.log(df['Sales'] + 1)  # Log transformation
 
-        st.write("## Sales Data Over Time")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(df['InvoiceDate'], df['Sales'], label='Sales Data')
-        ax.set_title('Sales Data Over Time')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Sales')
-        ax.legend()
-        ax.grid(True)
-        st.pyplot(fig)
+    # KPSS test for stationarity
+    kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
+    st.write('KPSS Statistic:', kpss_result[0])
+    st.write('p-value:', kpss_result[1])
 
-        # Log transformation
-        df['Sales_log'] = np.log(df['Sales'] + 1)
-
-        # KPSS test on log-transformed data
-        kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
-        st.write(f"## KPSS Test on Log-transformed Data")
-        st.write(f"KPSS Statistic: {kpss_result[0]}")
-        st.write(f"p-value: {kpss_result[1]}")
-
-        if kpss_result[1] < 0.05:
-            st.write("The log-transformed data is trend stationary.")
-        else:
-            st.write("The log-transformed data is not trend stationary, suggesting differencing might be needed.")
-
-        # First order differencing
-        df['Sales_diff'] = df['Sales_log'].diff().dropna()
-
-        # Plotting the differenced data
-        st.write("## First-Order Differenced Log-Transformed Sales Data")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(df['InvoiceDate'], df['Sales_diff'], label='Differenced Sales Log')
-        ax.set_title('First-Order Differenced Log-Transformed Sales Data')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Differenced Log(Sales)')
-        ax.legend()
-        ax.grid(True)
-        st.pyplot(fig)
-
-        # Re-run KPSS test on differenced data
-        kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
-        st.write(f"## KPSS Test on Differenced Data")
-        st.write(f"KPSS Statistic (differenced): {kpss_result_diff[0]}")
-        st.write(f"p-value (differenced): {kpss_result_diff[1]}")
+    if kpss_result[1] < 0.05:
+        st.write("The log-transformed data is trend stationary.")
     else:
-        st.error("The required 'Sales' column is not present in the DataFrame.")
-
-
+        st.write("The log-transformed data is not trend stationary, suggesting differencing might be needed.")
 
 # Main function to coordinate the flow
 def main():
     st.title("Streamlit App for Sales Data Analysis")
-    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv", key="file_uploader")
 
     if uploaded_file is not None:
-        df = process_data(uploaded_file)
-        if df is not None:
-            perform_eda(df)
-            check_stationarity(df)
+        df = pd.read_csv(uploaded_file)
+        cleaned_df = process_data(df)
+        if cleaned_df is not None:
+            perform_eda(cleaned_df)
+            check_stationarity(cleaned_df)
         else:
-            st.error("Please check your file, necessary columns are missing.")
+            st.error("Data could not be processed. Please check the file format.")
 
 if __name__ == "__main__":
     main()
