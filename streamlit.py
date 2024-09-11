@@ -153,11 +153,29 @@ def check_stationarity(df):
 
 
 
-def perform_modeling(df):
-    if not pd.api.types.is_datetime64_any_dtype(df.index):
+
+def prepare_data(df):
+    # Ensure 'InvoiceDate' is set as the DataFrame index and is of datetime type
+    df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+    if not df.index.name or df.index.name != 'InvoiceDate':
         df.set_index('InvoiceDate', inplace=True)
 
-    # Resample data to monthly and aggregate required fields
+    # Create a new DataFrame starting from the earliest date in the existing data
+    earliest_date = df.index.min()
+    new_data = {
+        'InvoiceDate': pd.date_range(start=earliest_date, periods=100, freq='D'),
+        'Sales_diff': [100 + i * 5 for i in range(100)],
+        'UnitPrice': [10] * 100,
+        'Country_Encoded': [0, 1, 0, 1] * 25
+    }
+    new_df = pd.DataFrame(new_data)
+    new_df['InvoiceDate'] = pd.to_datetime(new_df['InvoiceDate'])
+    new_df.set_index('InvoiceDate', inplace=True)
+    new_df['Month'] = new_df.index.month
+    new_df['DayOfWeek'] = new_df.index.dayofweek
+    new_df['IsWeekend'] = new_df['DayOfWeek'] >= 5
+
+    # Aggregate existing data to monthly granularity
     df_monthly = df.resample('M').agg({
         'Sales_diff': 'sum',
         'UnitPrice': 'mean',
@@ -167,37 +185,52 @@ def perform_modeling(df):
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
     df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # Linear Regression Model
+    return df_monthly, new_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+def monthly_sales_linear_regression(df_monthly):
+    # Prepare features and target variables
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
     y = df_monthly['Sales_diff']
+
+    # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize and train the Linear Regression model
     lin_model = LinearRegression()
     lin_model.fit(X_train, y_train)
+
+    # Predicting the test set results
     y_pred = lin_model.predict(X_test)
 
-    # Future dates prediction
+    # Prepare the combined future and historical index for future dates
     future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
-    future_data = pd.DataFrame(index=future_dates)
-    future_data['Month'] = future_data.index.month
-    future_data['DayOfWeek'] = future_data.index.dayofweek
-    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
-    future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
-    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
-    future_sales_predictions = lin_model.predict(future_data)
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
+    combined_data['IsWeekend'] = combined_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    combined_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
 
-    # Plotting historical sales
+    # Generate predictions for the entire period
+    lin_sales_predictions = lin_model.predict(combined_data)
+
+    # Plotting the results
     plt.figure(figsize=(14, 7))
     plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
-    plt.title('Historical Monthly Sales')
-    plt.xlabel('Date')
-    plt.ylabel('Sales')
-    plt.legend()
-    plt.show()
-
-    # Plotting future predictions
-    plt.figure(figsize=(14, 7))
-    plt.plot(future_dates, future_sales_predictions, label='Predicted Sales', linestyle='--', color='red')
-    plt.title('Forecasted Monthly Sales (Linear Regression)')
+    plt.plot(future_dates, lin_sales_predictions, label='Linear Regression Predictions', linestyle='--', color='red')
+    plt.title('Historical and Forecasted Monthly Sales (Linear Regression)')
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
@@ -213,7 +246,10 @@ def main():
         if df_cleaned is not None:
             perform_eda(df_cleaned)
             df_stationary = check_stationarity(df_cleaned)  # Get the stationary data
-            perform_modeling(df_stationary)  # Use the stationary data for modeling
+            df_monthly, new_df = prepare_data(df_stationary)  # Prepare the data for modeling
+            
+            # Call the Linear Regression model function
+            monthly_sales_linear_regression(df_monthly)  # Use the monthly sales linear regression model
         else:
             st.error("Data could not be processed. Check the file format.")
 
