@@ -19,7 +19,7 @@ def process_data(uploaded_file):
         if all(col in df.columns for col in ['UnitPrice', 'Quantity', 'InvoiceDate']):
             # Calculate Sales
             df['Sales'] = df['UnitPrice'] * df['Quantity']
-            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])  # Convert to datetime
+            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])   # Convert to datetime
             df.set_index('InvoiceDate', inplace=True)
 
             # Feature Engineering
@@ -35,6 +35,37 @@ def process_data(uploaded_file):
         else:
             st.error("The uploaded file must contain 'UnitPrice', 'Quantity', and 'InvoiceDate' columns.")
     return None
+
+def apply_transformations(df):
+    # Log transformation
+    df['Sales_log'] = np.log(df['Sales'] + 1)
+    # First order differencing
+    df['Sales_diff'] = df['Sales_log'].diff().dropna()
+    
+    # Plotting the differenced data
+    plt.figure(figsize=(10, 6))
+    plt.plot(df.index, df['Sales_diff'], label='Differenced Sales Log')
+    plt.title('First-Order Differenced Log-Transformed Sales Data')
+    plt.xlabel('Date')
+    plt.ylabel('Differenced Log(Sales)')
+    plt.legend()
+    plt.grid(True)
+    st.pyplot()
+
+    # KPSS test
+    kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
+    st.write(f'KPSS Statistic (differenced): {kpss_result_diff[0]}')
+    st.write(f'KPSS p-value (differenced): {kpss_result_diff[1]}')
+
+    # Seasonal differencing if required
+    if st.checkbox("Apply Seasonal Differencing?"):
+        df['Sales_seasonal_diff'] = df['Sales_log'].diff(12).dropna()
+        kpss_seasonal = kpss(df['Sales_seasonal_diff'].dropna(), regression='c')
+        st.write(f'KPSS Statistic (seasonal differencing): {kpss_seasonal[0]}')
+        st.write(f'KPSS p-value (seasonal differencing): {kpss_seasonal[1]}')
+
+    return df
+
 
 # Function to handle predictions and plotting for all models, with yearly option
 def model_and_predict(df, model_type='Linear Regression', resample_type='M'):
