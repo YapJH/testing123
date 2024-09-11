@@ -12,6 +12,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import kpss
 from sklearn.preprocessing import LabelEncoder  # Make sure this is at the top of your script
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 def process_data(uploaded_file):
