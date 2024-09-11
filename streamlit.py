@@ -151,9 +151,6 @@ def check_stationarity(df):
 
 
 def perform_modeling(df):
-    import matplotlib.pyplot as plt
-    import streamlit as st
-
     # Ensure the DataFrame index is properly set to 'InvoiceDate'
     if not pd.api.types.is_datetime64_any_dtype(df.index):
         df.set_index('InvoiceDate', inplace=True)
@@ -168,15 +165,27 @@ def perform_modeling(df):
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
     df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # First Linear Regression Model Training with actual data
+    # Split data for models
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
     y = df_monthly['Sales_diff']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    lin_model = LinearRegression()
-    lin_model.fit(X_train, y_train)
-    y_pred = lin_model.predict(X_test)
 
-    # Predictions for future dates using the actual trained model
+    # Linear Regression Model
+    linear_model = LinearRegression()
+    linear_model.fit(X_train, y_train)
+    y_pred_linear = linear_model.predict(X_test)
+
+    # K-Nearest Neighbors Model
+    knn_model = KNeighborsRegressor(n_neighbors=5)
+    knn_model.fit(X_train, y_train)
+    y_pred_knn = knn_model.predict(X_test)
+
+    # Random Forest Model
+    rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_model.fit(X_train, y_train)
+    y_pred_rf = rf_model.predict(X_test)
+
+    # Future dates for prediction
     future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
     future_data = pd.DataFrame(index=future_dates)
     future_data['Month'] = future_data.index.month
@@ -185,17 +194,27 @@ def perform_modeling(df):
     future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
     future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
 
-    future_sales_predictions = lin_model.predict(future_data)
+    # Predicting future sales
+    future_sales_linear = linear_model.predict(future_data)
+    future_sales_knn = knn_model.predict(future_data)
+    future_sales_rf = rf_model.predict(future_data)
 
-    # Plotting the results
+    # Plotting results
     plt.figure(figsize=(14, 7))
     plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
-    plt.plot(future_dates, future_sales_predictions, label='Predicted Sales', linestyle='--', color='red')
+    plt.plot(future_dates, future_sales_linear, label='Linear Regression Predictions', linestyle='--', color='red')
+    plt.plot(future_dates, future_sales_knn, label='KNN Predictions', linestyle=':', color='green')
+    plt.plot(future_dates, future_sales_rf, label='Random Forest Predictions', linestyle='-.', color='purple')
     plt.title('Historical and Forecasted Monthly Sales')
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
-    st.pyplot(plt)  # Streamlit function to display the plot
+    plt.show()
+
+    # Display model performance
+    st.write("Linear Regression R^2 Score:", r2_score(y_test, y_pred_linear))
+    st.write("KNN R^2 Score:", r2_score(y_test, y_pred_knn))
+    st.write("Random Forest R^2 Score:", r2_score(y_test, y_pred_rf))
 
 
 
