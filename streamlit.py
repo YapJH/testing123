@@ -15,6 +15,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
+from xgboost import XGBRegressor
 from sklearn.neural_network import MLPRegressor  # Import for Neural Networks
 from sklearn.metrics import mean_squared_error, r2_score
 
