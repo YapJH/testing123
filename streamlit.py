@@ -70,12 +70,10 @@ if df is not None:
 
     # Check for stationarity
     if kpss_result[1] < 0.05:
-        st.write("The log-transformed data is trend stationary. Proceeding with differencing.")
-    else:
-        st.write("The log-transformed data is not trend stationary.")
+        st.write("Data is not stationary. Proceeding with differencing.")
+        # Differencing
+        df['Sales_diff'] = df['Sales_log'].diff().dropna()
 
-    # Differencing
-    df['Sales_diff'] = df['Sales_log'].diff().dropna()
 
     # Plotting the differenced data
     st.subheader("First-Order Differenced Log-Transformed Sales Data")
