@@ -44,49 +44,39 @@ def process_data(uploaded_file):
     return None
 
 def apply_transformations(df):
-    # Log transformation and differencing
-    df['Sales_log'] = np.log(df['Sales'] + 1)
-    df['Sales_diff'] = df['Sales_log'].diff().dropna()
+    # Convert 'InvoiceDate' to datetime if not already done
+    df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+    if df.duplicated(subset='InvoiceDate').any():
+        st.warning('Duplicate dates detected. Aggregating sales data by date.')
+        df = df.groupby('InvoiceDate').agg({
+            'Sales': 'sum',  # Summing sales if there are duplicates
+            'UnitPrice': 'mean'  # Averaging unit price
+        }).reset_index()
 
-    # Check for stationarity with KPSS
-    if 'Sales_diff' in df:
-        kpss_result_diff = kpss(df['Sales_diff'], regression='c')
-        st.write(f'KPSS Statistic (differenced): {kpss_result_diff[0]}')
-        st.write(f'KPSS p-value (differenced): {kpss_result_diff[1]}')
+    df.set_index('InvoiceDate', inplace=True)
+
+    # Log transformation
+    df['Sales_log'] = np.log(df['Sales'] + 1)
+    # First order differencing
+    df['Sales_diff'] = df['Sales_log'].diff().dropna()
+    
+    # Plotting the differenced data
+    plt.figure(figsize=(10, 6))
+    plt.plot(df.index, df['Sales_diff'], label='Differenced Sales Log')
+    plt.title('First-Order Differenced Log-Transformed Sales Data')
+    plt.xlabel('Date')
+    plt.ylabel('Differenced Log(Sales)')
+    plt.legend()
+    plt.grid(True)
+    st.pyplot()
+
+    # KPSS test to check for stationarity after differencing
+    from statsmodels.tsa.stattools import kpss
+    kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
+    st.write(f'KPSS Statistic (differenced): {kpss_result_diff[0]}')
+    st.write(f'KPSS p-value (differenced): {kpss_result_diff[1]}')
 
     return df
-
-def model_and_predict(df, model_type='Linear Regression'):
-    if not all(col in df.columns for col in ['Sales']):
-        st.error("The dataset is missing required columns: ['Sales']")
-        return
-
-    X = df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend']]
-    y = df['Sales']
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Select and train model
-    if model_type == 'Linear Regression':
-        model = LinearRegression()
-    elif model_type == 'KNN':
-        model = KNeighborsRegressor(n_neighbors=5)
-    elif model_type == 'Random Forest':
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
-    elif model_type == 'Decision Tree':
-        model = DecisionTreeRegressor(random_state=42)
-    elif model_type == 'XGBoost':
-        model = XGBRegressor(n_estimators=100, learning_rate=0.1)
-    elif model_type == 'Neural Network':
-        model = MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
-    else:
-        st.error("Invalid model type selected.")
-        return
-
-    model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
-
-    st.write(f'Predictions: {predictions}')
 
 def main():
     st.title("Sales Forecasting App")
