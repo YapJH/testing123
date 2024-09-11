@@ -108,31 +108,6 @@ def perform_eda(df):
     plt.gcf().autofmt_xdate()
     st.pyplot(fig)
 
-    # Additional detailed scatter plot for individual sales
-    st.subheader("Detailed Daily Sales Visualization")
-    fig, ax = plt.subplots(figsize=(14, 7))
-    ax.scatter(
-        df['InvoiceDate'],
-        df['Sales'],
-        color='blue',
-        marker='o',
-        s=10,
-        alpha=0.5
-    )
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))  # Show a tick for every 10 days
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date display as Year-Month-Day
-    plt.gcf().autofmt_xdate()  # Rotate date labels for better readability
-
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))  # Format numbers with commas
-
-    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-    ax.set_title('Sales Data Visualization Over Date', fontsize=16)
-    ax.set_xlabel('Date', fontsize=14)
-    ax.set_ylabel('Sales', fontsize=14)
-
-    ax.legend(['Individual Sales'], loc='upper left', fontsize=12)
-
-    st.pyplot(fig)
 
 # Process the data
 df = process_data(uploaded_file)
