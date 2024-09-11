@@ -50,7 +50,7 @@ def process_data(uploaded_file):
             df = df[df['Quantity'] > 0]
             df = df[df['UnitPrice'] > 0]
         return df
-except Exception as e:
+    except Exception as e:
 # You can use Streamlit's error message display to show what went wrong
 st.error(f"An error occurred: {e}")
 return None
