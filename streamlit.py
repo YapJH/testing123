@@ -96,7 +96,7 @@ def perform_eda(df):
     st.pyplot(fig)
 
     # Scatter plot of sales
-    st.subheader("Scatter Plot of Sales")
+    st.subheader("Sales Data Visualization Over Month")
     fig, ax = plt.subplots()
     ax.scatter(df['InvoiceDate'], df['Sales'], alpha=0.5)
     ax.xaxis.set_major_locator(MonthLocator())
@@ -108,7 +108,34 @@ def perform_eda(df):
     plt.gcf().autofmt_xdate()
     st.pyplot(fig)
 
+    plt.figure(figsize=(14, 7))
+    plt.scatter(
+        df['InvoiceDate'],
+        df['Sales'],
+        color='blue',
+        marker='o',
+        s=10,
+        alpha=0.5
+    )
 
+    # Formatting the date axis
+    plt.gca().xaxis.set_major_locator(mdates.YearLocator())  # One tick per year
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    plt.gcf().autofmt_xdate()
+
+    # Formatting the y-axis to show labels with commas for thousands
+    plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda x, _: f'{int(x):,}'))
+
+    # Adding labels and title
+    plt.xlabel('Year')
+    plt.ylabel('Sales')
+    plt.title('Sales Data Visualization Over Years')
+    plt.grid(True, linestyle='--', linewidth=0.5)
+    plt.legend(['Individual Sales'], loc='upper left')
+
+    # Display the plot in Streamlit
+    st.pyplot(plt)
+    
 # Process the data
 df = process_data(uploaded_file)
 
