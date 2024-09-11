@@ -142,13 +142,21 @@ def check_stationarity(df):
 
 
 
+# Function for modeling
 def perform_modeling(df_stationary):
+    # Ensure that InvoiceDate is set as the index
+    if 'InvoiceDate' not in df_stationary.columns:
+        st.error("InvoiceDate column is missing from the dataset.")
+        return
+
+    df_stationary.set_index('InvoiceDate', inplace=True)
+
     # Aggregate data to monthly
     df_monthly = df_stationary.resample('M').agg({
         'Sales': 'sum',
         'UnitPrice': 'mean'
     }).reset_index()
-    
+
     # Feature engineering
     df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
@@ -196,7 +204,6 @@ def perform_modeling(df_stationary):
     plt.legend()
     plt.grid(True)
     st.pyplot()
-
 
 
 def main():
