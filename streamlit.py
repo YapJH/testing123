@@ -43,52 +43,51 @@ def process_data(uploaded_file):
             st.error("The uploaded file must contain 'UnitPrice', 'Quantity', and 'InvoiceDate' columns.")
     return None
 
-def apply_transformations(df):
-    # Convert 'InvoiceDate' to datetime if not already done
+def model_and_predict(df):
     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-    if df.duplicated(subset='InvoiceDate').any():
-        st.warning('Duplicate dates detected. Aggregating sales data by date.')
-        df = df.groupby('InvoiceDate').agg({
-            'Sales': 'sum',  # Summing sales if there are duplicates
-            'UnitPrice': 'mean'  # Averaging unit price
-        }).reset_index()
-
     df.set_index('InvoiceDate', inplace=True)
+    df_monthly = df.resample('M').agg({
+        'Sales_diff': 'sum',
+        'UnitPrice': 'mean',
+        'Country_Encoded': 'mean'
+    }).reset_index()
+    df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
+    df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
+    df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # Log transformation
-    df['Sales_log'] = np.log(df['Sales'] + 1)
-    # First order differencing
-    df['Sales_diff'] = df['Sales_log'].diff().dropna()
-    
-    # Plotting the differenced data
-    plt.figure(figsize=(10, 6))
-    plt.plot(df.index, df['Sales_diff'], label='Differenced Sales Log')
-    plt.title('First-Order Differenced Log-Transformed Sales Data')
-    plt.xlabel('Date')
-    plt.ylabel('Differenced Log(Sales)')
-    plt.legend()
-    plt.grid(True)
-    st.pyplot()
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y = df_monthly['Sales_diff']
 
-    # KPSS test to check for stationarity after differencing
-    from statsmodels.tsa.stattools import kpss
-    kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
-    st.write(f'KPSS Statistic (differenced): {kpss_result_diff[0]}')
-    st.write(f'KPSS p-value (differenced): {kpss_result_diff[1]}')
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    lin_model = LinearRegression()
+    lin_model.fit(X_train, y_train)
 
-    return df
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    combined_data = pd.DataFrame(index=future_dates)
+    combined_data['Month'] = combined_data.index.month
+    combined_data['DayOfWeek'] = combined_data.index.dayofweek
+    combined_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
+    combined_data['IsWeekend'] = combined_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    combined_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
+
+    lin_sales_predictions = lin_model.predict(combined_data)
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+    ax.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    ax.plot(future_dates, lin_sales_predictions, label='Linear Regression Predictions', linestyle='--', color='red')
+    ax.set_title('Historical and Forecasted Monthly Sales (Linear Regression)')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Sales')
+    ax.legend()
+    st.pyplot(fig)
 
 def main():
     st.title("Sales Forecasting App")
     uploaded_file = st.file_uploader("Choose a CSV file")
 
     if uploaded_file is not None:
-        df = process_data(uploaded_file)
-        if df is not None:
-            st.write(df.head())
-            transformed_df = apply_transformations(df)
-            model_type = st.selectbox("Select Model Type", ['Linear Regression', 'KNN', 'Random Forest', 'Decision Tree', 'XGBoost', 'Neural Network'])
-            model_and_predict(transformed_df, model_type)
+        df = pd.read_csv(uploaded_file)
+        model_and_predict(df)
 
 if __name__ == "__main__":
     main()
