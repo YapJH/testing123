@@ -7,9 +7,6 @@ from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import kpss
 import seaborn as sns
 
-import streamlit as st
-import pandas as pd
-
 # Title for the app
 st.title("Data Cleaning and Preparation")
 
