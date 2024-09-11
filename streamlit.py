@@ -130,6 +130,7 @@ def check_stationarity(df):
         
         if kpss_result[1] < 0.05:
             st.write("The data is trend stationary.")
+            df['Sales_diff'] = df['Sales_log']  # No differencing needed, use Sales_log
             stationary = True  # Break the loop if data is stationary
         else:
             st.write("The data is not trend stationary, differencing the data.")
