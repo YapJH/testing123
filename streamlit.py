@@ -140,8 +140,6 @@ def check_stationarity(df):
         ax.grid(True)
         st.pyplot(fig)
 
-    # Return the final differenced and stationary data
-    return data_to_test
 
 
 def main():
@@ -152,10 +150,8 @@ def main():
         df = pd.read_csv(uploaded_file)
         if df is not None:
             df_cleaned = process_data(df)
-            df_stationary = check_stationarity(df_cleaned)
-            # Proceed to model using df_stationary
-            model_results = model_data(df_stationary)
-            st.write(model_results)
+            perform_eda(df_cleaned)
+            check_stationarity(df_cleaned)
         else:
             st.error("Data could not be processed. Check the file format.")
 
