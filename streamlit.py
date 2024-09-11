@@ -140,7 +140,6 @@ def model_and_predict(df, model_type='Linear Regression', resample_type='M'):
     plt.legend()
     st.pyplot()
 
-# Streamlit app
 def main():
     st.title("Sales Forecasting with Machine Learning Models")
     st.write("Upload a sales data CSV file and select a machine learning model for forecasting future sales.")
@@ -157,6 +156,11 @@ def main():
             st.write("Data Preview:")
             st.write(df.head())
 
+            # Button to apply transformations
+            if st.button('Apply Log Transformations and Check Stationarity'):
+                df_transformed = apply_transformations(df)
+                st.write("Transformations Applied. Check KPSS results and plots.")
+            
             # Model selection
             model_type = st.selectbox('Select a Machine Learning Model', 
                                       ['Linear Regression', 'KNN', 'Random Forest', 'Decision Tree', 'XGBoost', 'Neural Network'])
@@ -165,10 +169,8 @@ def main():
             resample_type = st.selectbox('Choose resampling period (Monthly or Yearly)', ['Monthly', 'Yearly'])
 
             # Run model and plot predictions
-            if resample_type == 'Monthly':
-                model_and_predict(df, model_type=model_type, resample_type='M')
-            else:
-                model_and_predict(df, model_type=model_type, resample_type='Y')
+            if st.button("Run Model and Forecast"):
+                model_and_predict(df_transformed if 'df_transformed' in locals() else df, model_type=model_type, resample_type=resample_type)
         else:
             st.error("Error processing the file. Please check the format.")
     else:
@@ -176,3 +178,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
