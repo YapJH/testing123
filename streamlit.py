@@ -11,7 +11,7 @@ from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import kpss
-from sklearn.preprocessing import LabelEncoder  # Make sure this is at the top of your script
+from sklearn.preprocessing import LabelEncoder  
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
@@ -154,11 +154,10 @@ def check_stationarity(df):
 
 
 def perform_modeling(df):
-    if 'InvoiceDate' in df.columns:
-        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+    if not pd.api.types.is_datetime64_any_dtype(df.index):
         df.set_index('InvoiceDate', inplace=True)
 
-    # Aggregate to monthly data
+    # Resample data to monthly and aggregate required fields
     df_monthly = df.resample('M').agg({
         'Sales_diff': 'sum',
         'UnitPrice': 'mean',
@@ -168,44 +167,37 @@ def perform_modeling(df):
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
     df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # Prepare data for modeling
+    # Linear Regression Model
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
     y = df_monthly['Sales_diff']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    lin_model = LinearRegression()
+    lin_model.fit(X_train, y_train)
+    y_pred = lin_model.predict(X_test)
 
-    # Models
-    models = {
-        'Linear Regression': LinearRegression(),
-        'K-Nearest Neighbors': KNeighborsRegressor(n_neighbors=5),
-        'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
-    }
-    
-    future_data = pd.DataFrame({
-        'Month': [X_train['Month'].mean()] * 12,  # Adjust appropriately if you want real future months
-        'DayOfWeek': [0] * 12,  # Example placeholders
-        'UnitPrice': [X_train['UnitPrice'].mean()] * 12,
-        'IsWeekend': [0] * 12,
-        'Country_Encoded': [X_train['Country_Encoded'].mode()[0]] * 12
-    })
-    
+    # Future dates prediction
     future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
-    
-    plt.figure(figsize=(15, 10))
+    future_data = pd.DataFrame(index=future_dates)
+    future_data['Month'] = future_data.index.month
+    future_data['DayOfWeek'] = future_data.index.dayofweek
+    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
+    future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
+    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
+    future_sales_predictions = lin_model.predict(future_data)
 
-    for name, model in models.items():
-        model.fit(X_train, y_train)
-        predictions = model.predict(X_test)
-        future_predictions = model.predict(future_data)
-        
-        # Plotting
-        plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales')
-        plt.plot(future_dates, future_predictions, linestyle='--', label=f'{name} Predictions')
+    # Plotting historical sales
+    plt.figure(figsize=(14, 7))
+    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
+    plt.title('Historical Monthly Sales')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
 
-        # Display R^2 score and MSE
-        st.write(f"{name} R^2 Score: {r2_score(y_test, predictions):.2f}")
-        st.write(f"{name} MSE: {mean_squared_error(y_test, predictions):.2f}")
-        
-    plt.title('Sales Forecast Comparison')
+    # Plotting future predictions
+    plt.figure(figsize=(14, 7))
+    plt.plot(future_dates, future_sales_predictions, label='Predicted Sales', linestyle='--', color='red')
+    plt.title('Forecasted Monthly Sales (Linear Regression)')
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
