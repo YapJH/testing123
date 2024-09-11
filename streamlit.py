@@ -232,7 +232,11 @@ def setup_simulation_data(df):
     }
     new_df = pd.DataFrame(simulated_data)
     new_df['InvoiceDate'] = pd.to_datetime(new_df['InvoiceDate'])
-    new_df.set_index('InvoiceDate',
+    new_df.set_index('InvoiceDate', inplace=True)  # Correcting the line to close the set_index method
+    new_df['Month'] = new_df.index.month
+    new_df['DayOfWeek'] = new_df.index.dayofweek
+    new_df['IsWeekend'] = new_df['DayOfWeek'] >= 5
+    return new_df
 
 
 
