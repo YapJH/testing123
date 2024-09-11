@@ -106,5 +106,11 @@ df = process_data(uploaded_file)
 # Display the cleaned data
 if df is not None:
     st.write("Cleaned Data Preview:", df.head())
+    
+    # Call the EDA function after confirming the data is loaded and cleaned
+    perform_eda(df)
 else:
     st.write("No data to display. Please upload a file with the correct format.")
+
+
+
