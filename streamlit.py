@@ -154,11 +154,11 @@ def check_stationarity(df):
 
 
 def perform_modeling(df):
-    # Ensure the DataFrame index is properly set to 'InvoiceDate'
-    if not pd.api.types.is_datetime64_any_dtype(df.index):
+    if 'InvoiceDate' in df.columns:
+        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
         df.set_index('InvoiceDate', inplace=True)
 
-    # Resample data to monthly and aggregate required fields
+    # Aggregate to monthly data
     df_monthly = df.resample('M').agg({
         'Sales_diff': 'sum',
         'UnitPrice': 'mean',
@@ -168,57 +168,48 @@ def perform_modeling(df):
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
     df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # Split data for models
+    # Prepare data for modeling
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
     y = df_monthly['Sales_diff']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Linear Regression Model
-    linear_model = LinearRegression()
-    linear_model.fit(X_train, y_train)
-    y_pred_linear = linear_model.predict(X_test)
-
-    # K-Nearest Neighbors Model
-    knn_model = KNeighborsRegressor(n_neighbors=5)
-    knn_model.fit(X_train, y_train)
-    y_pred_knn = knn_model.predict(X_test)
-
-    # Random Forest Model
-    rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_model.fit(X_train, y_train)
-    y_pred_rf = rf_model.predict(X_test)
-
-    # Future dates for prediction
+    # Models
+    models = {
+        'Linear Regression': LinearRegression(),
+        'K-Nearest Neighbors': KNeighborsRegressor(n_neighbors=5),
+        'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
+    }
+    
+    future_data = pd.DataFrame({
+        'Month': [X_train['Month'].mean()] * 12,  # Adjust appropriately if you want real future months
+        'DayOfWeek': [0] * 12,  # Example placeholders
+        'UnitPrice': [X_train['UnitPrice'].mean()] * 12,
+        'IsWeekend': [0] * 12,
+        'Country_Encoded': [X_train['Country_Encoded'].mode()[0]] * 12
+    })
+    
     future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
-    future_data = pd.DataFrame(index=future_dates)
-    future_data['Month'] = future_data.index.month
-    future_data['DayOfWeek'] = future_data.index.dayofweek
-    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
-    future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
-    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
+    
+    plt.figure(figsize=(15, 10))
 
-    # Predicting future sales
-    future_sales_linear = linear_model.predict(future_data)
-    future_sales_knn = knn_model.predict(future_data)
-    future_sales_rf = rf_model.predict(future_data)
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        future_predictions = model.predict(future_data)
+        
+        # Plotting
+        plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales')
+        plt.plot(future_dates, future_predictions, linestyle='--', label=f'{name} Predictions')
 
-    # Plotting results
-    plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
-    plt.plot(future_dates, future_sales_linear, label='Linear Regression Predictions', linestyle='--', color='red')
-    plt.plot(future_dates, future_sales_knn, label='KNN Predictions', linestyle=':', color='green')
-    plt.plot(future_dates, future_sales_rf, label='Random Forest Predictions', linestyle='-.', color='purple')
-    plt.title('Historical and Forecasted Monthly Sales')
+        # Display R^2 score and MSE
+        st.write(f"{name} R^2 Score: {r2_score(y_test, predictions):.2f}")
+        st.write(f"{name} MSE: {mean_squared_error(y_test, predictions):.2f}")
+        
+    plt.title('Sales Forecast Comparison')
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
     plt.show()
-
-    # Display model performance
-    st.write("Linear Regression R^2 Score:", r2_score(y_test, y_pred_linear))
-    st.write("KNN R^2 Score:", r2_score(y_test, y_pred_knn))
-    st.write("Random Forest R^2 Score:", r2_score(y_test, y_pred_rf))
-
 
 
 def main():
