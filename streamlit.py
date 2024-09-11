@@ -39,7 +39,19 @@ def process_data(uploaded_file):
                 lambda row: stockcode_description_map.get(row['StockCode'], row['Description']) if pd.isnull(row['Description']) else row['Description'],
                 axis=1
             )
+            
+            # Label Encoding for 'StockCode'
+            le_stockcode = LabelEncoder()
+            df['StockCode_Encoded'] = le_stockcode.fit_transform(df['StockCode'])
 
+            # Label Encoding for 'Country'
+            le_country = LabelEncoder()
+            df['Country_Encoded'] = le_country.fit_transform(df['Country'])
+
+            # Convert 'IsWeekend' to binary encoding
+            df['IsWeekend_Encoded'] = df['IsWeekend'].astype(int)
+
+            
             # Drop rows with any missing 'Description' or 'CustomerID'
             df = df.dropna(subset=['Description', 'CustomerID'])
 
@@ -106,18 +118,6 @@ def perform_eda(df):
     ax.grid(True)
     st.pyplot(fig)
 
-    # Scatter plot of sales
-    st.subheader("Sales Data Visualization Over Month")
-    fig, ax = plt.subplots()
-    ax.scatter(df['InvoiceDate'], df['Sales'], alpha=0.5)
-    ax.xaxis.set_major_locator(MonthLocator())
-    ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
-    ax.set_title('Sales Scatter Plot Over Time')
-    ax.set_xlabel('Invoice Date')
-    ax.set_ylabel('Sales')
-    ax.grid(True)
-    plt.gcf().autofmt_xdate()
-    st.pyplot(fig)
 
 
 def check_stationarity(df):
