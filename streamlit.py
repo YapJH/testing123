@@ -209,3 +209,7 @@ def main():
             perform_modeling(df_stationary)  # Use the stationary DataFrame for modeling
         else:
             st.error("Data could not be processed. Check the file format.")
+
+
+if __name__ == "__main__":
+    main()
