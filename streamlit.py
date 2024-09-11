@@ -107,20 +107,39 @@ def perform_eda(df):
     st.pyplot(fig)
 
 
-# Function to check stationarity
 def check_stationarity(df):
     df['Sales'] = df['UnitPrice'] * df['Quantity']
     df['Sales_log'] = np.log(df['Sales'] + 1)  # Log transformation
+    
+    stationary = False
+    data_to_test = df['Sales_log']
+    
+    while not stationary:
+        # KPSS test for stationarity
+        kpss_result = kpss(data_to_test.dropna(), regression='c')
+        st.write('KPSS Statistic:', kpss_result[0])
+        st.write('p-value:', kpss_result[1])
+        
+        if kpss_result[1] < 0.05:
+            st.write("The data is trend stationary.")
+            stationary = True  # Break the loop if data is stationary
+        else:
+            st.write("The data is not trend stationary, differencing the data.")
+            # Perform differencing and set the differenced data as the next data to test
+            data_to_test = data_to_test.diff().dropna()
 
-    # KPSS test for stationarity
-    kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
-    st.write('KPSS Statistic:', kpss_result[0])
-    st.write('p-value:', kpss_result[1])
-
-    if kpss_result[1] < 0.05:
-        st.write("The log-transformed data is trend stationary.")
-    else:
-        st.write("The log-transformed data is not trend stationary, suggesting differencing might be needed.")
+    # Display final differenced data if any differencing was performed
+    if data_to_test is not df['Sales_log']:
+        st.subheader("Final Differenced Data")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(data_to_test.index, data_to_test, label='Differenced Data')
+        ax.set_title('Differenced Data after Achieving Stationarity')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Differenced Values')
+        ax.legend()
+        ax.grid(True)
+        st.pyplot(fig)
+        
 
 # Main function to coordinate the flow
 def main():
