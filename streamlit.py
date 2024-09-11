@@ -134,69 +134,72 @@ def check_stationarity(df):
 
 
 def perform_modeling(df_stationary):
-    # Ensure 'InvoiceDate' is a column and convert it to datetime if needed
-    if 'InvoiceDate' not in df_stationary.columns:
-        st.error("'InvoiceDate' column is missing in the dataset.")
+    # Check if the necessary columns exist
+    required_columns = ['Sales_diff', 'UnitPrice', 'Country_Encoded', 'InvoiceDate']
+    missing_columns = [col for col in required_columns if col not in df_stationary.columns]
+    
+    if missing_columns:
+        st.error(f"The following required columns are missing: {missing_columns}")
         return
-
-    # Set the index to 'InvoiceDate' for resampling
-    df_stationary.set_index('InvoiceDate', inplace=True)
-
+    
     # Resample data to monthly aggregates
-    df_monthly = df_stationary.resample('M').agg({
-        'Sales_diff': 'sum',  # Replace 'Sales_diff' with actual sales data if needed
-        'UnitPrice': 'mean',
-        'Country_Encoded': 'mean'
-    }).reset_index()
+    try:
+        df_stationary.set_index('InvoiceDate', inplace=True)
+        df_monthly = df_stationary.resample('M').agg({
+            'Sales_diff': 'sum',  
+            'UnitPrice': 'mean',
+            'Country_Encoded': 'mean'
+        }).reset_index()
 
-    # Feature engineering
-    df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
-    df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
-    df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
+        # Feature engineering
+        df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
+        df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
+        df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # Prepare the features (X) and target (y)
-    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-    y = df_monthly['Sales_diff']
+        # Prepare the features (X) and target (y)
+        X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+        y = df_monthly['Sales_diff']
 
-    # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Train the Linear Regression model
-    lin_model = LinearRegression()
-    lin_model.fit(X_train, y_train)
+        # Train the Linear Regression model
+        lin_model = LinearRegression()
+        lin_model.fit(X_train, y_train)
 
-    # Predict on the test set
-    y_pred = lin_model.predict(X_test)
+        # Predict on the test set
+        y_pred = lin_model.predict(X_test)
 
-    # Display model performance
-    st.write("Model Coefficients:", lin_model.coef_)
-    st.write("Intercept:", lin_model.intercept_)
-    st.write("R² Score (Test Set):", lin_model.score(X_test, y_test))
+        # Display model performance
+        st.write("Model Coefficients:", lin_model.coef_)
+        st.write("Intercept:", lin_model.intercept_)
+        st.write("R² Score (Test Set):", lin_model.score(X_test, y_test))
 
-    # Future predictions for the next 12 months
-    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
-    future_data = pd.DataFrame(index=future_dates)
-    future_data['Month'] = future_data.index.month
-    future_data['DayOfWeek'] = future_data.index.dayofweek
-    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
-    future_data['IsWeekend'] = future_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
-    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]  # Use most frequent value
+        # Future predictions for the next 12 months
+        future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+        future_data = pd.DataFrame(index=future_dates)
+        future_data['Month'] = future_data.index.month
+        future_data['DayOfWeek'] = future_data.index.dayofweek
+        future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()  # Assuming constant unit price
+        future_data['IsWeekend'] = future_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+        future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
 
-    # Predict future sales
-    future_sales_predictions = lin_model.predict(future_data)
+        # Predict future sales
+        future_sales_predictions = lin_model.predict(future_data)
 
-    # Plot the results
-    plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly['InvoiceDate'], df_monthly['Sales_diff'], label='Historical Sales')
-    plt.plot(future_dates, future_sales_predictions, 'r--', label='Predicted Sales')
-    plt.title('Sales Forecast (Historical vs. Predicted)')
-    plt.xlabel('Date')
-    plt.ylabel('Sales')
-    plt.legend()
-    plt.grid(True)
-    st.pyplot()
+        # Plot the results
+        plt.figure(figsize=(14, 7))
+        plt.plot(df_monthly['InvoiceDate'], df_monthly['Sales_diff'], label='Historical Sales')
+        plt.plot(future_dates, future_sales_predictions, 'r--', label='Predicted Sales')
+        plt.title('Sales Forecast (Historical vs. Predicted)')
+        plt.xlabel('Date')
+        plt.ylabel('Sales')
+        plt.legend()
+        plt.grid(True)
+        st.pyplot()
 
-
+    except KeyError as e:
+        st.error(f"KeyError: {e}")
 
 
 def main():
