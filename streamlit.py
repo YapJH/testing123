@@ -109,23 +109,16 @@ def perform_eda(df):
     st.pyplot(fig)
 
 
-def perform_eda_and_checks(df):
-    # Convert 'InvoiceDate' to datetime if it's not already
-    if 'InvoiceDate' in df.columns:
-        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
-
-    # Ensure 'Sales' column exists
+# Function to check stationarity
+def check_stationarity(df):
     if 'Sales' in df.columns:
-        # Check basic statistics and distribution of 'Sales'
-        st.write("Basic Statistical Overview of Sales:")
+        # Basic statistics and visualization
+        st.write("## Basic Statistical Overview of Sales")
         st.write(df['Sales'].describe())
+        st.write("## Sales Value Counts")
+        st.write(df['Sales'].value_counts().head(10))
 
-        # Sales value counts
-        st.write("Sales Value Counts:")
-        st.write(df['Sales'].value_counts().head(10))  # Show top 10 most frequent sales values
-
-        # Time series plot of sales
-        st.subheader("Time Series Plot of Sales")
+        st.write("## Sales Data Over Time")
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(df['InvoiceDate'], df['Sales'], label='Sales Data')
         ax.set_title('Sales Data Over Time')
@@ -135,25 +128,25 @@ def perform_eda_and_checks(df):
         ax.grid(True)
         st.pyplot(fig)
 
-        # Log transformation of sales to stabilize variance
+        # Log transformation
         df['Sales_log'] = np.log(df['Sales'] + 1)
 
-        # KPSS test for stationarity on log-transformed data
+        # KPSS test on log-transformed data
         kpss_result = kpss(df['Sales_log'].dropna(), regression='c')
-        st.write(f"KPSS Statistic on log-transformed data: {kpss_result[0]}")
-        st.write(f"KPSS p-value on log-transformed data: {kpss_result[1]}")
+        st.write(f"## KPSS Test on Log-transformed Data")
+        st.write(f"KPSS Statistic: {kpss_result[0]}")
+        st.write(f"p-value: {kpss_result[1]}")
 
-        # Decision based on p-value
         if kpss_result[1] < 0.05:
             st.write("The log-transformed data is trend stationary.")
         else:
             st.write("The log-transformed data is not trend stationary, suggesting differencing might be needed.")
 
-        # Applying first order differencing
+        # First order differencing
         df['Sales_diff'] = df['Sales_log'].diff().dropna()
 
         # Plotting the differenced data
-        st.subheader("Differenced Sales Data")
+        st.write("## First-Order Differenced Log-Transformed Sales Data")
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(df['InvoiceDate'], df['Sales_diff'], label='Differenced Sales Log')
         ax.set_title('First-Order Differenced Log-Transformed Sales Data')
@@ -163,31 +156,28 @@ def perform_eda_and_checks(df):
         ax.grid(True)
         st.pyplot(fig)
 
-        # Re-running KPSS test on differenced data
+        # Re-run KPSS test on differenced data
         kpss_result_diff = kpss(df['Sales_diff'].dropna(), regression='c')
-        st.write(f"KPSS Statistic after differencing: {kpss_result_diff[0]}")
-        st.write(f"KPSS p-value after differencing: {kpss_result_diff[1]}")
-
+        st.write(f"## KPSS Test on Differenced Data")
+        st.write(f"KPSS Statistic (differenced): {kpss_result_diff[0]}")
+        st.write(f"p-value (differenced): {kpss_result_diff[1]}")
     else:
         st.error("The required 'Sales' column is not present in the DataFrame.")
 
-# Define functions and other import statements above
 
+
+# Main function to coordinate the flow
 def main():
-    st.title("Your App Title")
-    
-    # File uploader
+    st.title("Streamlit App for Sales Data Analysis")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-    
+
     if uploaded_file is not None:
-        # Process the file
         df = process_data(uploaded_file)
-        
-        # If the DataFrame is not empty, perform EDA
         if df is not None:
             perform_eda(df)
+            check_stationarity(df)
         else:
-            st.error("Data could not be processed. Please ensure the file format is correct.")
+            st.error("Please check your file, necessary columns are missing.")
 
 if __name__ == "__main__":
     main()
