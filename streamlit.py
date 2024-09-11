@@ -12,9 +12,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import kpss
 
-# Title for the app
-st.title("Sales Data Analysis")
-
 
 # Function to process the uploaded data
 def process_data(uploaded_file):
@@ -142,6 +139,63 @@ def check_stationarity(df):
 
 
 
+
+
+# Function for modeling
+def perform_modeling(check_stationarity):
+    # Aggregate data to monthly
+    df_monthly = df_cleaned.resample('M').agg({
+        'Sales': 'sum',
+        'UnitPrice': 'mean'
+    }).reset_index()
+    df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
+    df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
+    df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
+    df_monthly['Country_Encoded'] = [0, 1] * (len(df_monthly) // 2)  # Example encoding, adjust as necessary
+
+    # Preparing the features and labels
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y = df_monthly['Sales']
+
+    # Splitting the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Linear Regression Model
+    lin_model = LinearRegression()
+    lin_model.fit(X_train, y_train)
+
+    # Prediction
+    y_pred = lin_model.predict(X_test)
+
+    # Display results
+    st.write("Model Coefficients:", lin_model.coef_)
+    st.write("Intercept:", lin_model.intercept_)
+    st.write("Score:", lin_model.score(X_test, y_test))
+
+    # Future predictions
+    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    future_data = pd.DataFrame(index=future_dates)
+    future_data['Month'] = future_data.index.month
+    future_data['DayOfWeek'] = future_data.index.dayofweek
+    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
+    future_data['IsWeekend'] = future_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
+
+    # Predict future sales
+    future_sales_predictions = lin_model.predict(future_data)
+
+    # Plot results
+    plt.figure(figsize=(14, 7))
+    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales')
+    plt.plot(future_dates, future_sales_predictions, 'r--', label='Predicted Sales')
+    plt.title('Sales Forecast')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.grid(True)
+    st.pyplot()
+
+# Main function to coordinate everything
 def main():
     st.title("Sales Data Analysis")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
@@ -152,6 +206,7 @@ def main():
         if df_cleaned is not None:
             perform_eda(df_cleaned)
             check_stationarity(df_cleaned)
+            perform_modeling(check_stationarity)  # Add this call to the modeling function
         else:
             st.error("Data could not be processed. Check the file format.")
 
