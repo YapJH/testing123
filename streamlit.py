@@ -17,6 +17,8 @@ from sklearn.preprocessing import LabelEncoder  # Make sure this is at the top o
 # Function to process the uploaded data
 def process_data(uploaded_file):
     if uploaded_file is not None:
+        try:
+
         df = pd.read_csv(uploaded_file)
 
         # Ensure 'InvoiceDate' is in datetime format
@@ -52,7 +54,10 @@ def process_data(uploaded_file):
         
         return df
 
-    return None
+  except Exception as e:
+        # You can use Streamlit's error message display to show what went wrong
+        st.error(f"An error occurred: {e}")
+        return None
 
 
 # Function for EDA
