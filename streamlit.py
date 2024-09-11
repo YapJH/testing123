@@ -150,72 +150,24 @@ def check_stationarity(df):
 
 
 
-def perform_modeling(df_stationary):
+def perform_modeling(df):
+    if 'InvoiceDate' in df.columns and not pd.api.types.is_datetime64_any_dtype(df.index):
+        df.set_index('InvoiceDate', inplace=True)
+    
+    # Ensure the index is set correctly to a datetime type
+    if not pd.api.types.is_datetime64_any_dtype(df.index):
+        st.error("The DataFrame index is not a datetime type, which is necessary for resampling.")
+        return
+
     try:
-        # Ensure the columns we need exist
-        if 'InvoiceDate' not in df_stationary.columns:
-            raise KeyError("Missing 'InvoiceDate' column")
-
-        # Resample and aggregate data to monthly
-        df_monthly = df_stationary.resample('M').agg({
+        df_monthly = df.resample('M').agg({
             'Sales_diff': 'sum',
-            'UnitPrice': 'mean'
+            'UnitPrice': 'mean',
+            'Country_Encoded': 'mean'
         }).reset_index()
-
-        # Feature engineering
-        df_monthly['Month'] = df_monthly['InvoiceDate'].dt.month
-        df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
-        df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
-
-        # Make sure Country_Encoded exists (you can add it during your encoding step)
-        if 'Country_Encoded' not in df_stationary.columns:
-            raise KeyError("Missing 'Country_Encoded' column")
-
-        # Prepare the features and labels
-        X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-        y = df_monthly['Sales_diff']
-
-        # Splitting the data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Linear Regression Model
-        lin_model = LinearRegression()
-        lin_model.fit(X_train, y_train)
-
-        # Prediction
-        y_pred = lin_model.predict(X_test)
-
-        # Display results
-        st.write("Model Coefficients:", lin_model.coef_)
-        st.write("Intercept:", lin_model.intercept_)
-        st.write("Score:", lin_model.score(X_test, y_test))
-
-        # Future predictions
-        future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
-        future_data = pd.DataFrame(index=future_dates)
-        future_data['Month'] = future_data.index.month
-        future_data['DayOfWeek'] = future_data.index.dayofweek
-        future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
-        future_data['IsWeekend'] = future_data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
-        future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
-
-        # Predict future sales
-        future_sales_predictions = lin_model.predict(future_data)
-
-        # Plot results
-        plt.figure(figsize=(14, 7))
-        plt.plot(df_monthly['InvoiceDate'], df_monthly['Sales_diff'], label='Historical Sales')
-        plt.plot(future_dates, future_sales_predictions, 'r--', label='Predicted Sales')
-        plt.title('Sales Forecast')
-        plt.xlabel('Date')
-        plt.ylabel('Sales')
-        plt.legend()
-        plt.grid(True)
-        st.pyplot()
-
-    except KeyError as e:
-        st.error(f"Error during modeling: {e}")
-        st.write("The following columns are in the DataFrame:", df_stationary.columns)
+        # further processing and modeling goes here
+    except Exception as e:
+        st.error(f"Failed to resample DataFrame: {e}")
 
 
 def main():
