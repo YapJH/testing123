@@ -25,11 +25,10 @@ def process_data(uploaded_file):
             df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])   # Convert to datetime
             df.set_index('InvoiceDate', inplace=True)
 
-            # Ensure the index is unique
+            # Remove duplicate indices to prevent reindexing issues
             if not df.index.is_unique:
                 st.warning('Duplicate indices detected. Resetting index to ensure uniqueness.')
-                df.reset_index(inplace=True)
-                df.set_index('InvoiceDate', inplace=True)
+                df = df[~df.index.duplicated(keep='first')]
 
             # Feature Engineering
             df['Month'] = df.index.month
