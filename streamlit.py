@@ -151,6 +151,9 @@ def check_stationarity(df):
 
 
 def perform_modeling(df):
+    import matplotlib.pyplot as plt
+    import streamlit as st
+
     # Ensure the DataFrame index is properly set to 'InvoiceDate'
     if not pd.api.types.is_datetime64_any_dtype(df.index):
         df.set_index('InvoiceDate', inplace=True)
@@ -192,52 +195,7 @@ def perform_modeling(df):
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
-    plt.show()
-
-    # Prepare a new simulated DataFrame starting from the earliest date in the existing dataset
-    earliest_date = df.index.min()
-    new_data = {
-        'InvoiceDate': pd.date_range(start=earliest_date, periods=100, freq='D'),
-        'Sales_diff': [100 + i * 5 for i in range(100)],
-        'UnitPrice': [10] * 100,
-        'Country_Encoded': [0, 1, 0, 1] * 25
-    }
-    new_df = pd.DataFrame(new_data)
-    new_df['InvoiceDate'] = pd.to_datetime(new_df['InvoiceDate'])
-    new_df.set_index('InvoiceDate', inplace=True)
-    new_df['Month'] = new_df.index.month
-    new_df['DayOfWeek'] = new_df.index.dayofweek
-    new_df['IsWeekend'] = new_df['DayOfWeek'] >= 5
-
-    # Second Linear Regression Model training with simulated data
-    X_new = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-    y_new = new_df['Sales_diff']
-    X_new_train, X_new_test, y_new_train, y_new_test = train_test_split(X_new, y_new, test_size=0.2, random_state=42)
-    new_lin_model = LinearRegression()
-    new_lin_model.fit(X_new_train, y_new_train)
-    y_new_pred = new_lin_model.predict(X_new_test)
-
-    # Combine both historical and new predicted data and show in one plot
-    combined_dates = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
-    combined_data = pd.DataFrame(index=combined_dates)
-    combined_data['Month'] = combined_data.index.month
-    combined_data['DayOfWeek'] = combined_data.index.dayofweek
-    combined_data['UnitPrice'] = X_new['UnitPrice'].mean()
-    combined_data['IsWeekend'] = 0
-    combined_data['Country_Encoded'] = X_new['Country_Encoded'].mode()[0]
-
-    combined_sales_predictions = new_lin_model.predict(combined_data)
-
-    # Plotting the combined results
-    plt.figure(figsize=(14, 7))
-    plt.plot(new_df.index, y_new, label='Simulated Historical Sales', color='blue')
-    plt.plot(combined_dates, combined_sales_predictions, label='Simulated Forecasted Sales', linestyle='--', color='green')
-    plt.title('Simulated Historical and Forecasted Sales')
-    plt.xlabel('Date')
-    plt.ylabel('Sales')
-    plt.legend()
-    plt.show()
-
+    st.pyplot(plt)  # Streamlit function to display the plot
 
 
 
