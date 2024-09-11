@@ -152,13 +152,13 @@ def check_stationarity(df):
 
 def perform_modeling(df):
     import matplotlib.pyplot as plt
-    import streamlit as st
+    from sklearn.linear_model import LinearRegression
+    from sklearn.model_selection import train_test_split
+    import pandas as pd
 
-    # Ensure the DataFrame index is properly set to 'InvoiceDate'
     if not pd.api.types.is_datetime64_any_dtype(df.index):
         df.set_index('InvoiceDate', inplace=True)
 
-    # Resample data to monthly and aggregate required fields
     df_monthly = df.resample('M').agg({
         'Sales_diff': 'sum',
         'UnitPrice': 'mean',
@@ -168,36 +168,71 @@ def perform_modeling(df):
     df_monthly['DayOfWeek'] = df_monthly['InvoiceDate'].dt.dayofweek
     df_monthly['IsWeekend'] = df_monthly['DayOfWeek'] >= 5
 
-    # First Linear Regression Model Training with actual data
-    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-    y = df_monthly['Sales_diff']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    lin_model = LinearRegression()
-    lin_model.fit(X_train, y_train)
-    y_pred = lin_model.predict(X_test)
+    # Training the first model with actual monthly data
+    X_actual = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y_actual = df_monthly['Sales_diff']
+    X_train_actual, X_test_actual, y_train_actual, y_test_actual = train_test_split(X_actual, y_actual, test_size=0.2, random_state=42)
+    model_actual = LinearRegression()
+    model_actual.fit(X_train_actual, y_train_actual)
 
-    # Predictions for future dates using the actual trained model
-    future_dates = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
-    future_data = pd.DataFrame(index=future_dates)
-    future_data['Month'] = future_data.index.month
-    future_data['DayOfWeek'] = future_data.index.dayofweek
-    future_data['UnitPrice'] = df_monthly['UnitPrice'].mean()
-    future_data['IsWeekend'] = future_data['DayOfWeek'] >= 5
-    future_data['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
+    # Predicting future sales
+    future_dates_actual = pd.date_range(start=df_monthly['InvoiceDate'].max() + pd.DateOffset(months=1), periods=12, freq='M')
+    future_data_actual = pd.DataFrame(index=future_dates_actual)
+    future_data_actual['Month'] = future_data_actual.index.month
+    future_data_actual['DayOfWeek'] = future_data_actual.index.dayofweek
+    future_data_actual['UnitPrice'] = df_monthly['UnitPrice'].mean()
+    future_data_actual['IsWeekend'] = future_data_actual['DayOfWeek'] >= 5
+    future_data_actual['Country_Encoded'] = df_monthly['Country_Encoded'].mode()[0]
+    future_sales_predictions_actual = model_actual.predict(future_data_actual)
 
-    future_sales_predictions = lin_model.predict(future_data)
-
-    # Plotting the results
     plt.figure(figsize=(14, 7))
-    plt.plot(df_monthly['InvoiceDate'], y, label='Historical Sales', color='blue')
-    plt.plot(future_dates, future_sales_predictions, label='Predicted Sales', linestyle='--', color='red')
+    plt.plot(df_monthly['InvoiceDate'], y_actual, label='Historical Sales', color='blue')
+    plt.plot(future_dates_actual, future_sales_predictions_actual, label='Predicted Sales', linestyle='--', color='red')
     plt.title('Historical and Forecasted Monthly Sales')
     plt.xlabel('Date')
     plt.ylabel('Sales')
     plt.legend()
-    st.pyplot(plt)  # Streamlit function to display the plot
+    plt.show()
 
+    # Setting up the simulation data
+    new_df = setup_simulation_data(df)
+    X_simulation = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y_simulation = new_df['Sales_diff']
+    X_train_simulation, X_test_simulation, y_train_simulation, y_test_simulation = train_test_split(X_simulation, y_simulation, test_size=0.2, random_state=42)
+    model_simulation = LinearRegression()
+    model_simulation.fit(X_train_simulation, y_train_simulation)
 
+    future_dates_simulation = pd.date_range(start=new_df.index.min(), periods=len(new_df) + 12, freq='M')
+    future_data_simulation = pd.DataFrame(index=future_dates_simulation)
+    future_data_simulation['Month'] = future_data_simulation.index.month
+    future_data_simulation['DayOfWeek'] = future_data_simulation.index.dayofweek
+    future_data_simulation['UnitPrice'] = X_simulation['UnitPrice'].mean()
+    future_data_simulation['IsWeekend'] = 0
+    future_data_simulation['Country_Encoded'] = X_simulation['Country_Encoded'].mode()[0]
+
+    future_sales_predictions_simulation = model_simulation.predict(future_data_simulation)
+
+    plt.figure(figsize=(14, 7))
+    plt.plot(new_df.index, y_simulation, label='Simulated Historical Sales', color='blue')
+    plt.plot(future_dates_simulation, future_sales_predictions_simulation, label='Simulated Forecasted Sales', linestyle='--', color='green')
+    plt.title('Simulated Historical and Forecasted Sales')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
+    plt.legend()
+    plt.show()
+
+def setup_simulation_data(df):
+    # Assuming df is already set up with necessary columns like 'Sales_diff'
+    earliest_date = df.index.min()
+    simulated_data = {
+        'InvoiceDate': pd.date_range(start=earliest_date, periods=100, freq='D'),
+        'Sales_diff': [100 + i * 5 for i in range(100)],
+        'UnitPrice': [10] * 100,
+        'Country_Encoded': [0, 1, 0, 1] * 25
+    }
+    new_df = pd.DataFrame(simulated_data)
+    new_df['InvoiceDate'] = pd.to_datetime(new_df['InvoiceDate'])
+    new_df.set_index('InvoiceDate',
 
 
 
