@@ -14,11 +14,11 @@ from statsmodels.tsa.stattools import kpss
 from sklearn.preprocessing import LabelEncoder  # Make sure this is at the top of your script
 
 
-# Function to process the uploaded data
 def process_data(uploaded_file):
-    if uploaded_file is not None:
-        try:
+    try:
+        if uploaded_file is not None:
             df = pd.read_csv(uploaded_file)
+
             # Ensure 'InvoiceDate' is in datetime format
             df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
 
@@ -33,27 +33,31 @@ def process_data(uploaded_file):
             df['IsWeekend'] = df['DayOfWeek'] >= 5  # True for Saturday and Sunday
 
             # Mapping descriptions to stock codes and filling missing descriptions
-            stockcode_description_map = df.groupby('StockCode')['Description'].apply(lambda x: x.mode()[0] if not x.mode().empty else None).to_dict()
+            stockcode_description_map = df.groupby('StockCode')['Description'].apply(
+                lambda x: x.mode()[0] if not x.mode().empty else None).to_dict()
             df['Description'] = df.apply(
                 lambda row: stockcode_description_map.get(row['StockCode'], row['Description']) if pd.isnull(row['Description']) else row['Description'],
                 axis=1
             )
-            
+
             # Drop rows with any missing 'Description' or 'CustomerID'
             df = df.dropna(subset=['Description', 'CustomerID'])
 
             # Filter out rows with non-positive 'Quantity', 'UnitPrice', or missing 'CustomerID'
             df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0) & (df['CustomerID'] > 0)]
 
+            # Calculate 'Sales' as 'UnitPrice' * 'Quantity'
             df['Sales'] = df['UnitPrice'] * df['Quantity']
-        
-            df = df[df['Quantity'] > 0]
-            df = df[df['UnitPrice'] > 0]
-        return df
+
+            # Filter out rows with non-positive 'Sales'
+            df = df[df['Sales'] > 0]
+
+            return df
+
     except Exception as e:
-# You can use Streamlit's error message display to show what went wrong
-st.error(f"An error occurred: {e}")
-return None
+        # Use Streamlit's error message display to show what went wrong
+        st.error(f"An error occurred: {e}")
+        return None
 
 
 # Function for EDA
