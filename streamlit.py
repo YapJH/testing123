@@ -11,6 +11,7 @@ from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.stattools import kpss
+from sklearn.preprocessing import LabelEncoder  # Make sure this is at the top of your script
 
 
 # Function to process the uploaded data
