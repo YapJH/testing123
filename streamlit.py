@@ -355,6 +355,10 @@ def yearly_sales_knn(new_df):
     # Use st.pyplot to display the plot in Streamlit
     st.pyplot(fig)
 
+
+
+
+
 def monthly_sales_random_forest(df_monthly):
     # Prepare features and target variables
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]  # Example features
@@ -705,7 +709,7 @@ def main():
             yearly_sales_linear_regression(new_df)
             monthly_sales_knn(df_monthly) 
             yearly_sales_knn(new_df)
-            onthly_sales_random_forest(df_monthly)
+            monthly_sales_random_forest(df_monthly)
             yearly_sales_random_forest(new_df)
             monthly_sales_XGBoost(df_monthly)
             yearly_sales_XGBoost(new_df)
