@@ -128,9 +128,9 @@ def check_stationarity(df):
             # Perform differencing and set the differenced data as the next data to test
             data_to_test = data_to_test.diff().dropna()
 
-    # Display final differenced data if any differencing was performed
-    if data_to_test is not df['Sales_log']:
-        st.subheader("Final Differenced Data")
+    # Visualization of the final stationary data
+    if not data_to_test.equals(df['Sales_log']):
+        st.subheader("Final Differenced Data for Modeling")
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(data_to_test.index, data_to_test, label='Differenced Data')
         ax.set_title('Differenced Data after Achieving Stationarity')
@@ -139,15 +139,17 @@ def check_stationarity(df):
         ax.legend()
         ax.grid(True)
         st.pyplot(fig)
-        
+
+
+
 
 # Main function to coordinate the flow
 def main():
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
-        df = process_data(uploaded_file)
-        perform_eda(df)
-        check_stationarity(df)
+        df_cleaned = process_data(df)
+        df_stationary = check_stationarity(df_cleaned)
+        # Proceed to model using df_stationary
 
 if __name__ == "__main__":
     main()
