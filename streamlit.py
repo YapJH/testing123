@@ -701,10 +701,14 @@ def main():
     if uploaded_file is not None:
         df_cleaned = process_data(uploaded_file)
         if df_cleaned is not None:
+            st.title("Exploratory Data Analysis (EDA)")
+
             perform_eda(df_cleaned)
+            st.title("Check feature and stationary")
             df_stationary = check_stationarity(df_cleaned)  # Get the stationary data
             df_monthly, new_df = prepare_data(df_stationary)  # Prepare the data for modeling
-            
+
+            st.title("Model Forecast")
             # Call the Linear Regression model function
             monthly_sales_linear_regression(df_monthly)  # Use the monthly sales linear regression model
             yearly_sales_linear_regression(new_df)
