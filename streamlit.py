@@ -141,8 +141,17 @@ def check_stationarity(df):
         
         if kpss_result[1] < 0.05:
             st.write("The data is trend stationary.")
-            df['Sales_diff'] = df['Sales_log']  # No differencing needed, use Sales_log
-            stationary = True  # Break the loop if data is stationary
+            # Give the user the option to choose whether they want to perform differencing or not
+            apply_differencing = st.checkbox("P-value is less than 0.05. Do you want to apply differencing?", value=True)
+            
+            if apply_differencing:
+                st.write("Differencing applied to the data.")
+                df['Sales_diff'] = data_to_test.diff().dropna()
+                data_to_test = df['Sales_diff']  # Use differenced data for the next iteration
+            else:
+                st.write("Differencing skipped, using the log-transformed data.")
+                df['Sales_diff'] = df['Sales_log']  # Use log-transformed data
+                stationary = True  # Exit the loop if no differencing is applied
         else:
             st.write("The data is not trend stationary, differencing the data.")
             # Perform differencing and set the differenced data as the next data to test
