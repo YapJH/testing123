@@ -692,11 +692,10 @@ def yearly_sales_neural_network(new_df):
 
 
 
-def evaluate_models(df_monthly):
-    # Prepare the feature matrix (X) and the target (y)
-    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
-    y = df_monthly['Sales_diff']
-    
+def yearly_model_evaluation(new_df):
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']] 
+    y = new_df['Sales_diff']  # Target
+
     # Splitting the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -707,7 +706,7 @@ def evaluate_models(df_monthly):
         'Decision Tree': DecisionTreeRegressor(),
         'Random Forest': RandomForestRegressor(n_estimators=100),
         'Neural Network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=500, random_state=42),
-        'XGBoost': XGBRegressor(n_estimators=100, learning_rate=0.1)
+        'XGBoost': XGBRegressor(n_estimators=100, learning_rate=0.1) 
     }
 
     # Dictionary to hold evaluation metrics
@@ -717,13 +716,13 @@ def evaluate_models(df_monthly):
     for name, model in models.items():
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-        
+
         # Calculate evaluation metrics
         mae = mean_absolute_error(y_test, y_pred)
         mse = mean_squared_error(y_test, y_pred)
         rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
         r2 = r2_score(y_test, y_pred)
-        
+
         # Store results
         evaluation_results[name] = {
             'MAE': mae,
@@ -734,21 +733,80 @@ def evaluate_models(df_monthly):
 
     # Convert results to DataFrame for better visualization
     evaluation_df = pd.DataFrame(evaluation_results).T
-    st.write("### Model Evaluation Results")
-    st.dataframe(evaluation_df)
+    print(evaluation_df)
 
     # Plotting the results
-    st.write("### Model Comparison Chart")
-    fig, ax = plt.subplots(figsize=(14, 7))
-    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', ax=ax)
-    plt.title('Model Comparison')
+    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', figsize=(14, 7))
+    plt.title('Yearly Model Comparison')
     plt.ylabel('Metric Value')
     plt.xticks(rotation=45)
-    st.pyplot(fig)
+    plt.show()
 
-    # Identify the best model based on RMSE (you can change this to R² if needed)
-    best_model = evaluation_df['RMSE'].idxmin()
-    st.write(f"**Best Model based on RMSE:** {best_model}")
+
+
+def monthly_model_evaluation(df_monthly):
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']] 
+    y = df_monthly['Sales_diff']  # Target
+
+    # Splitting the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize models
+    models = {
+        'KNN': KNeighborsRegressor(n_neighbors=5),
+        'Linear Regression': LinearRegression(),
+        'Decision Tree': DecisionTreeRegressor(),
+        'Random Forest': RandomForestRegressor(n_estimators=100),
+        'Neural Network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=500, random_state=42),
+        'XGBoost': XGBRegressor(n_estimators=100, learning_rate=0.1) 
+    }
+
+    # Dictionary to hold evaluation metrics
+    evaluation_results = {}
+
+    # Train and evaluate each model
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        # Calculate evaluation metrics
+        mae = mean_absolute_error(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
+        r2 = r2_score(y_test, y_pred)
+
+        # Store results
+        evaluation_results[name] = {
+            'MAE': mae,
+            'MSE': mse,
+            'RMSE': rmse,
+            'R²': r2
+        }
+
+    # Convert results to DataFrame for better visualization
+    evaluation_df = pd.DataFrame(evaluation_results).T
+    print(evaluation_df)
+
+    # Plotting the results
+    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', figsize=(14, 7))
+    plt.title('Monthly Model Comparison')
+    plt.ylabel('Metric Value')
+    plt.xticks(rotation=45)
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -781,23 +839,6 @@ def main():
                 ("Monthly", "Yearly")
             )
 
-            # Add a button to trigger model evaluation
-            if st.button("Evaluate Models"):
-                st.write("Evaluating models...")
-
-                # Call the evaluation function
-                evaluation_results = evaluate_models(df_monthly)
-                
-                if evaluation_results is not None:
-                    # Display evaluation results as a table
-                    st.write(evaluation_results)  
-                    
-                    # Optional: Display which model performs best based on a criterion, e.g., RMSE
-                    best_model = evaluation_results['RMSE'].idxmin()
-                    st.write(f"The best model is: {best_model}")
-                else:
-                    st.error("Model evaluation returned no results.")
-            
             # Call the appropriate model function based on user selection
             if algorithm == "Linear Regression":
                 if forecast_type == "Monthly":
@@ -834,6 +875,22 @@ def main():
                     monthly_sales_neural_network(df_monthly)
                 else:
                     yearly_sales_neural_network(new_df)
+
+                    # Add a section for model evaluation
+            elif task == "Evaluate Models":
+                forecast_type = st.selectbox(
+                    "Evaluate for Monthly or Yearly",
+                    ("Monthly", "Yearly")
+                )
+
+                # Call the appropriate evaluation function
+                if forecast_type == "Monthly":
+                    st.write("Evaluating models for monthly data...")
+                    monthly_model_evaluation(df_monthly)
+                else:
+                    st.write("Evaluating models for yearly data...")
+                    yearly_model_evaluation(new_df)
+                    
 
         else:
             st.error("Data could not be processed. Check the file format.")
