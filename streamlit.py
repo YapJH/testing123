@@ -781,19 +781,23 @@ def main():
                 ("Monthly", "Yearly")
             )
 
-                        # Add a button to trigger model evaluation
+            # Add a button to trigger model evaluation
             if st.button("Evaluate Models"):
                 st.write("Evaluating models...")
 
                 # Call the evaluation function
                 evaluation_results = evaluate_models(df_monthly)
-                st.write(evaluation_results)  # Display evaluation results as a table
-
-                # Optional: Display which model performs best based on a criterion, e.g., RMSE
-                best_model = evaluation_results['RMSE'].idxmin()
-                st.write(f"The best model is: {best_model}")
                 
-
+                if evaluation_results is not None:
+                    # Display evaluation results as a table
+                    st.write(evaluation_results)  
+                    
+                    # Optional: Display which model performs best based on a criterion, e.g., RMSE
+                    best_model = evaluation_results['RMSE'].idxmin()
+                    st.write(f"The best model is: {best_model}")
+                else:
+                    st.error("Model evaluation returned no results.")
+            
             # Call the appropriate model function based on user selection
             if algorithm == "Linear Regression":
                 if forecast_type == "Monthly":
