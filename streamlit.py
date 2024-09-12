@@ -696,35 +696,73 @@ def yearly_sales_neural_network(new_df):
 
 def main():
     st.title("Sales Data Analysis")
+
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
     if uploaded_file is not None:
         df_cleaned = process_data(uploaded_file)
         if df_cleaned is not None:
             st.title("Exploratory Data Analysis (EDA)")
-
             perform_eda(df_cleaned)
+
             st.title("Check feature and stationary")
             df_stationary = check_stationarity(df_cleaned)  # Get the stationary data
             df_monthly, new_df = prepare_data(df_stationary)  # Prepare the data for modeling
 
             st.title("Model Forecast")
-            # Call the Linear Regression model function
-            monthly_sales_linear_regression(df_monthly)  # Use the monthly sales linear regression model
-            yearly_sales_linear_regression(new_df)
-            monthly_sales_knn(df_monthly) 
-            yearly_sales_knn(new_df)
-            monthly_sales_random_forest(df_monthly)
-            yearly_sales_random_forest(new_df)
-            monthly_sales_XGBoost(df_monthly)
-            yearly_sales_XGBoost(new_df)
-            monthly_sales_decision_tree(df_monthly)
-            yearly_sales_decision_tree(new_df)
-            monthly_sales_neural_network(df_monthly)
-            yearly_sales_neural_network(new_df)
-        
+
+            # Let the user choose the algorithm
+            algorithm = st.selectbox(
+                "Select the algorithm for forecasting",
+                ("Linear Regression", "KNN", "Random Forest", "XGBoost", "Decision Tree", "Neural Network")
+            )
+
+            # Let the user choose between monthly and yearly forecast
+            forecast_type = st.selectbox(
+                "Select forecast type",
+                ("Monthly", "Yearly")
+            )
+
+            # Call the appropriate model function based on user selection
+            if algorithm == "Linear Regression":
+                if forecast_type == "Monthly":
+                    monthly_sales_linear_regression(df_monthly)
+                else:
+                    yearly_sales_linear_regression(new_df)
+
+            elif algorithm == "KNN":
+                if forecast_type == "Monthly":
+                    monthly_sales_knn(df_monthly)
+                else:
+                    yearly_sales_knn(new_df)
+
+            elif algorithm == "Random Forest":
+                if forecast_type == "Monthly":
+                    monthly_sales_random_forest(df_monthly)
+                else:
+                    yearly_sales_random_forest(new_df)
+
+            elif algorithm == "XGBoost":
+                if forecast_type == "Monthly":
+                    monthly_sales_XGBoost(df_monthly)
+                else:
+                    yearly_sales_XGBoost(new_df)
+
+            elif algorithm == "Decision Tree":
+                if forecast_type == "Monthly":
+                    monthly_sales_decision_tree(df_monthly)
+                else:
+                    yearly_sales_decision_tree(new_df)
+
+            elif algorithm == "Neural Network":
+                if forecast_type == "Monthly":
+                    monthly_sales_neural_network(df_monthly)
+                else:
+                    yearly_sales_neural_network(new_df)
+
         else:
             st.error("Data could not be processed. Check the file format.")
 
 if __name__ == "__main__":
     main()
+
