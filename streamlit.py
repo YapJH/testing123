@@ -16,7 +16,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
-from sklearn.neural_network import MLPRegressor  # Import for Neural Networks
+from sklearn.neural_network import MLPRegressor  
 from sklearn.metrics import mean_squared_error, r2_score
 
 
@@ -692,12 +692,68 @@ def yearly_sales_neural_network(new_df):
 
 
 
+def evaluate_models(df_monthly):
+    # Prepare the feature matrix (X) and the target (y)
+    X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']]
+    y = df_monthly['Sales_diff']
+    
+    # Splitting the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    # Initialize models
+    models = {
+        'KNN': KNeighborsRegressor(n_neighbors=5),
+        'Linear Regression': LinearRegression(),
+        'Decision Tree': DecisionTreeRegressor(),
+        'Random Forest': RandomForestRegressor(n_estimators=100),
+        'Neural Network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=500, random_state=42),
+        'XGBoost': XGBRegressor(n_estimators=100, learning_rate=0.1)
+    }
+
+    # Dictionary to hold evaluation metrics
+    evaluation_results = {}
+
+    # Train and evaluate each model
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        
+        # Calculate evaluation metrics
+        mae = mean_absolute_error(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
+        r2 = r2_score(y_test, y_pred)
+        
+        # Store results
+        evaluation_results[name] = {
+            'MAE': mae,
+            'MSE': mse,
+            'RMSE': rmse,
+            'R²': r2
+        }
+
+    # Convert results to DataFrame for better visualization
+    evaluation_df = pd.DataFrame(evaluation_results).T
+    st.write("### Model Evaluation Results")
+    st.dataframe(evaluation_df)
+
+    # Plotting the results
+    st.write("### Model Comparison Chart")
+    fig, ax = plt.subplots(figsize=(14, 7))
+    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', ax=ax)
+    plt.title('Model Comparison')
+    plt.ylabel('Metric Value')
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+    # Identify the best model based on RMSE (you can change this to R² if needed)
+    best_model = evaluation_df['RMSE'].idxmin()
+    st.write(f"**Best Model based on RMSE:** {best_model}")
 
 
 
 def main():
-    st.title("Sales Data Analysis")
+    st.title("Sales Forecasting")
 
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
@@ -711,7 +767,7 @@ def main():
             df_stationary = check_stationarity(df_cleaned)  # Get the stationary data
             df_monthly, new_df = prepare_data(df_stationary)  # Prepare the data for modeling
 
-            st.title("Model Forecast")
+            st.title("Model for Sales Forecasting")
 
             # Let the user choose the algorithm
             algorithm = st.selectbox(
@@ -724,6 +780,19 @@ def main():
                 "Select forecast type",
                 ("Monthly", "Yearly")
             )
+
+                        # Add a button to trigger model evaluation
+            if st.button("Evaluate Models"):
+                st.write("Evaluating models...")
+
+                # Call the evaluation function
+                evaluation_results = evaluate_models(df_monthly)
+                st.write(evaluation_results)  # Display evaluation results as a table
+
+                # Optional: Display which model performs best based on a criterion, e.g., RMSE
+                best_model = evaluation_results['RMSE'].idxmin()
+                st.write(f"The best model is: {best_model}")
+                
 
             # Call the appropriate model function based on user selection
             if algorithm == "Linear Regression":
