@@ -692,59 +692,7 @@ def yearly_sales_neural_network(new_df):
 
 
 
-def yearly_model_evaluation(new_df):
-    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']] 
-    y = new_df['Sales_diff']  # Target
-
-    # Splitting the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Initialize models
-    models = {
-        'KNN': KNeighborsRegressor(n_neighbors=5),
-        'Linear Regression': LinearRegression(),
-        'Decision Tree': DecisionTreeRegressor(),
-        'Random Forest': RandomForestRegressor(n_estimators=100),
-        'Neural Network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=500, random_state=42),
-        'XGBoost': XGBRegressor(n_estimators=100, learning_rate=0.1) 
-    }
-
-    # Dictionary to hold evaluation metrics
-    evaluation_results = {}
-
-    # Train and evaluate each model
-    for name, model in models.items():
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-
-        # Calculate evaluation metrics
-        mae = mean_absolute_error(y_test, y_pred)
-        mse = mean_squared_error(y_test, y_pred)
-        rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
-        r2 = r2_score(y_test, y_pred)
-
-        # Store results
-        evaluation_results[name] = {
-            'MAE': mae,
-            'MSE': mse,
-            'RMSE': rmse,
-            'R²': r2
-        }
-
-    # Convert results to DataFrame for better visualization
-    evaluation_df = pd.DataFrame(evaluation_results).T
-    print(evaluation_df)
-
-    # Plotting the results
-    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', figsize=(14, 7))
-    plt.title('Yearly Model Comparison')
-    plt.ylabel('Metric Value')
-    plt.xticks(rotation=45)
-    plt.show()
-
-
-
-def monthly_model_evaluation(df_monthly):
+def evaluate_models_monthly(df_monthly):
     X = df_monthly[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']] 
     y = df_monthly['Sales_diff']  # Target
 
@@ -768,13 +716,13 @@ def monthly_model_evaluation(df_monthly):
     for name, model in models.items():
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-
+        
         # Calculate evaluation metrics
         mae = mean_absolute_error(y_test, y_pred)
         mse = mean_squared_error(y_test, y_pred)
         rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
         r2 = r2_score(y_test, y_pred)
-
+        
         # Store results
         evaluation_results[name] = {
             'MAE': mae,
@@ -785,17 +733,71 @@ def monthly_model_evaluation(df_monthly):
 
     # Convert results to DataFrame for better visualization
     evaluation_df = pd.DataFrame(evaluation_results).T
-    print(evaluation_df)
-
+    st.write("### Monthly Model Evaluation Results")
+    st.dataframe(evaluation_df)  # Display as a table
+    
     # Plotting the results
-    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', figsize=(14, 7))
+    fig, ax = plt.subplots(figsize=(14, 7))
+    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', ax=ax)
     plt.title('Monthly Model Comparison')
     plt.ylabel('Metric Value')
     plt.xticks(rotation=45)
-    plt.show()
+    st.pyplot(fig)
 
 
 
+
+def evaluate_models_yearly(new_df):
+    X = new_df[['Month', 'DayOfWeek', 'UnitPrice', 'IsWeekend', 'Country_Encoded']] 
+    y = new_df['Sales_diff']  # Target
+
+    # Splitting the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Initialize models
+    models = {
+        'KNN': KNeighborsRegressor(n_neighbors=5),
+        'Linear Regression': LinearRegression(),
+        'Decision Tree': DecisionTreeRegressor(),
+        'Random Forest': RandomForestRegressor(n_estimators=100),
+        'Neural Network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=500, random_state=42),
+        'XGBoost': XGBRegressor(n_estimators=100, learning_rate=0.1) 
+    }
+
+    # Dictionary to hold evaluation metrics
+    evaluation_results = {}
+
+    # Train and evaluate each model
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        
+        # Calculate evaluation metrics
+        mae = mean_absolute_error(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
+        r2 = r2_score(y_test, y_pred)
+        
+        # Store results
+        evaluation_results[name] = {
+            'MAE': mae,
+            'MSE': mse,
+            'RMSE': rmse,
+            'R²': r2
+        }
+
+    # Convert results to DataFrame for better visualization
+    evaluation_df = pd.DataFrame(evaluation_results).T
+    st.write("### Yearly Model Evaluation Results")
+    st.dataframe(evaluation_df)  # Display as a table
+    
+    # Plotting the results
+    fig, ax = plt.subplots(figsize=(14, 7))
+    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', ax=ax)
+    plt.title('Yearly Model Comparison')
+    plt.ylabel('Metric Value')
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
 
 
@@ -827,56 +829,63 @@ def main():
 
             st.title("Model for Sales Forecasting")
 
-            # Let the user choose the algorithm
-            algorithm = st.selectbox(
-                "Select the algorithm for forecasting",
-                ("Linear Regression", "KNN", "Random Forest", "XGBoost", "Decision Tree", "Neural Network")
+            # Let the user choose the algorithm or evaluate models
+            task = st.selectbox(
+                "Select Task",
+                ("Forecasting", "Evaluate Models")
             )
 
-            # Let the user choose between monthly and yearly forecast
-            forecast_type = st.selectbox(
-                "Select forecast type",
-                ("Monthly", "Yearly")
-            )
+            if task == "Forecasting":
+                # Let the user choose the algorithm
+                algorithm = st.selectbox(
+                    "Select the algorithm for forecasting",
+                    ("Linear Regression", "KNN", "Random Forest", "XGBoost", "Decision Tree", "Neural Network")
+                )
 
-            # Call the appropriate model function based on user selection
-            if algorithm == "Linear Regression":
-                if forecast_type == "Monthly":
-                    monthly_sales_linear_regression(df_monthly)
-                else:
-                    yearly_sales_linear_regression(new_df)
+                # Let the user choose between monthly and yearly forecast
+                forecast_type = st.selectbox(
+                    "Select forecast type",
+                    ("Monthly", "Yearly")
+                )
 
-            elif algorithm == "KNN":
-                if forecast_type == "Monthly":
-                    monthly_sales_knn(df_monthly)
-                else:
-                    yearly_sales_knn(new_df)
+                # Call the appropriate model function based on user selection
+                if algorithm == "Linear Regression":
+                    if forecast_type == "Monthly":
+                        monthly_sales_linear_regression(df_monthly)
+                    else:
+                        yearly_sales_linear_regression(new_df)
 
-            elif algorithm == "Random Forest":
-                if forecast_type == "Monthly":
-                    monthly_sales_random_forest(df_monthly)
-                else:
-                    yearly_sales_random_forest(new_df)
+                elif algorithm == "KNN":
+                    if forecast_type == "Monthly":
+                        monthly_sales_knn(df_monthly)
+                    else:
+                        yearly_sales_knn(new_df)
 
-            elif algorithm == "XGBoost":
-                if forecast_type == "Monthly":
-                    monthly_sales_XGBoost(df_monthly)
-                else:
-                    yearly_sales_XGBoost(new_df)
+                elif algorithm == "Random Forest":
+                    if forecast_type == "Monthly":
+                        monthly_sales_random_forest(df_monthly)
+                    else:
+                        yearly_sales_random_forest(new_df)
 
-            elif algorithm == "Decision Tree":
-                if forecast_type == "Monthly":
-                    monthly_sales_decision_tree(df_monthly)
-                else:
-                    yearly_sales_decision_tree(new_df)
+                elif algorithm == "XGBoost":
+                    if forecast_type == "Monthly":
+                        monthly_sales_XGBoost(df_monthly)
+                    else:
+                        yearly_sales_XGBoost(new_df)
 
-            elif algorithm == "Neural Network":
-                if forecast_type == "Monthly":
-                    monthly_sales_neural_network(df_monthly)
-                else:
-                    yearly_sales_neural_network(new_df)
+                elif algorithm == "Decision Tree":
+                    if forecast_type == "Monthly":
+                        monthly_sales_decision_tree(df_monthly)
+                    else:
+                        yearly_sales_decision_tree(new_df)
 
-                    # Add a section for model evaluation
+                elif algorithm == "Neural Network":
+                    if forecast_type == "Monthly":
+                        monthly_sales_neural_network(df_monthly)
+                    else:
+                        yearly_sales_neural_network(new_df)
+
+            # Add a section for model evaluation
             elif task == "Evaluate Models":
                 forecast_type = st.selectbox(
                     "Evaluate for Monthly or Yearly",
@@ -886,15 +895,14 @@ def main():
                 # Call the appropriate evaluation function
                 if forecast_type == "Monthly":
                     st.write("Evaluating models for monthly data...")
-                    monthly_model_evaluation(df_monthly)
+                    evaluate_models_monthly(df_monthly)  # Call the monthly evaluation function
                 else:
                     st.write("Evaluating models for yearly data...")
-                    yearly_model_evaluation(new_df)
-                    
+                    evaluate_models_yearly(new_df)  # Call the yearly evaluation function
 
         else:
             st.error("Data could not be processed. Check the file format.")
 
+
 if __name__ == "__main__":
     main()
-
