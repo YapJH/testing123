@@ -128,27 +128,30 @@ def perform_eda(df):
 
 def check_stationarity(df):
     df['Sales'] = df['UnitPrice'] * df['Quantity']
-    df['Sales_log'] = np.log(df['Sales'] + 1)  # Log transformation
-    
+    df['Sales_log'] = np.log(df['Sales'] + 1)  # Log transformation to handle zeros
+
     stationary = False
     data_to_test = df['Sales_log']
-    
+    diff_count = 0
+
     while not stationary:
         # KPSS test for stationarity
         kpss_result = kpss(data_to_test.dropna(), regression='c')
         st.write('KPSS Statistic:', kpss_result[0])
         st.write('p-value:', kpss_result[1])
         
-        if kpss_result[1] < 0.05:
-            st.write("The data is trend stationary.")
-            df['Sales_diff'] = df['Sales_log']  # No differencing needed, use Sales_log
+        if kpss_result[1] >= 0.05:
+            st.write("The data is now stationary.")
+            df['Sales_diff'] = data_to_test  # No more differencing needed
             stationary = True  # Break the loop if data is stationary
         else:
-            st.write("The data is not trend stationary, differencing the data.")
-            # Perform differencing and set the differenced data as the next data to test
+            st.write(f"The data is not stationary, applying differencing (iteration {diff_count + 1}).")
+            # Apply differencing and set the differenced data as the next data to test
             df['Sales_diff'] = data_to_test.diff().dropna()
             data_to_test = df['Sales_diff']
+            diff_count += 1
 
+    st.write(f"Stationarity achieved after {diff_count} differencing iterations.")
     # Return the entire DataFrame, not just the differenced series
     return df
 
