@@ -17,7 +17,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
 from sklearn.neural_network import MLPRegressor  
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
 def process_data(uploaded_file):
