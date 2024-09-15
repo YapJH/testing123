@@ -3,10 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
 from sklearn.model_selection import train_test_split
 from statsmodels.tsa.stattools import kpss
@@ -17,7 +13,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
 from sklearn.neural_network import MLPRegressor  
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 def process_data(uploaded_file):
@@ -721,14 +717,12 @@ def evaluate_models_monthly(df_monthly):
         mae = mean_absolute_error(y_test, y_pred)
         mse = mean_squared_error(y_test, y_pred)
         rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
-        r2 = r2_score(y_test, y_pred)
         
         # Store results
         evaluation_results[name] = {
             'MAE': mae,
             'MSE': mse,
-            'RMSE': rmse,
-            'R²': r2
+            'RMSE': rmse
         }
 
     # Convert results to DataFrame for better visualization
@@ -738,7 +732,7 @@ def evaluate_models_monthly(df_monthly):
     
     # Plotting the results
     fig, ax = plt.subplots(figsize=(14, 7))
-    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', ax=ax)
+    evaluation_df[['MAE', 'MSE', 'RMSE']].plot(kind='bar', ax=ax)
     plt.title('Monthly Model Comparison')
     plt.ylabel('Metric Value')
     plt.xticks(rotation=45)
@@ -776,14 +770,12 @@ def evaluate_models_yearly(new_df):
         mae = mean_absolute_error(y_test, y_pred)
         mse = mean_squared_error(y_test, y_pred)
         rmse = mean_squared_error(y_test, y_pred, squared=False)  # RMSE
-        r2 = r2_score(y_test, y_pred)
         
         # Store results
         evaluation_results[name] = {
             'MAE': mae,
             'MSE': mse,
-            'RMSE': rmse,
-            'R²': r2
+            'RMSE': rmse
         }
 
     # Convert results to DataFrame for better visualization
@@ -793,7 +785,7 @@ def evaluate_models_yearly(new_df):
     
     # Plotting the results
     fig, ax = plt.subplots(figsize=(14, 7))
-    evaluation_df[['MAE', 'MSE', 'RMSE', 'R²']].plot(kind='bar', ax=ax)
+    evaluation_df[['MAE', 'MSE', 'RMSE']].plot(kind='bar', ax=ax)
     plt.title('Yearly Model Comparison')
     plt.ylabel('Metric Value')
     plt.xticks(rotation=45)
